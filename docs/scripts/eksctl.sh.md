@@ -70,25 +70,28 @@ INSTALL_DIR=$HOME/bin curl https://awsutils.github.io/eksctl.sh | sh
 
 ### Available Options
 
-| Option | Description |
-|--------|-------------|
-| `--version VERSION` | Install specific version |
+| Option              | Description                   |
+| ------------------- | ----------------------------- |
+| `--version VERSION` | Install specific version      |
 | `--install-dir DIR` | Custom installation directory |
-| `--help` | Display help information |
+| `--help`            | Display help information      |
 
 ### Examples
 
 **Install latest version:**
+
 ```bash
 ./eksctl.sh
 ```
 
 **Install specific version:**
+
 ```bash
 ./eksctl.sh --version 0.150.0
 ```
 
 **Custom installation directory:**
+
 ```bash
 ./eksctl.sh --install-dir /usr/local/bin
 ```
@@ -283,8 +286,9 @@ rm $HOME/bin/eksctl
 ## Support
 
 For issues with:
+
 - **eksctl tool**: Visit [eksctl GitHub](https://github.com/weaveworks/eksctl/issues)
-- **Installation script**: Open issue on [AWS Utilities GitHub](https://github.com/awsutils/awsutils.github.io/issues)
+- **Installation script**: Open issue on [awsutils GitHub](https://github.com/awsutils/awsutils.github.io/issues)
 
 ## Related Scripts
 

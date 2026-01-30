@@ -71,11 +71,13 @@ chmod +x get_helm.sh
 ### Method 4: Package Manager
 
 **macOS (Homebrew):**
+
 ```bash
 brew install helm
 ```
 
 **Ubuntu/Debian (apt):**
+
 ```bash
 curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
@@ -448,12 +450,14 @@ helm plugin uninstall diff
 ### Popular Plugins
 
 **helm-diff:**
+
 ```bash
 # Compare changes before upgrade
 helm diff upgrade my-release bitnami/nginx --values new-values.yaml
 ```
 
 **helm-secrets:**
+
 ```bash
 # Encrypt secrets
 helm secrets enc secrets.yaml
@@ -504,6 +508,7 @@ export HELM_DEBUG=true
 ### Issue: "helm: command not found"
 
 **Solution:**
+
 ```bash
 # Check installation
 which helm
@@ -522,6 +527,7 @@ source ~/.bashrc
 ### Issue: "Error: Kubernetes cluster unreachable"
 
 **Solution:**
+
 ```bash
 # Verify kubectl is configured
 kubectl cluster-info
@@ -539,6 +545,7 @@ helm list
 ### Issue: "Error: INSTALLATION FAILED: has no deployed releases"
 
 **Solution:**
+
 ```bash
 # Check helm releases
 helm list -A
@@ -556,6 +563,7 @@ helm install my-release bitnami/nginx
 ### Issue: "Error: release has failed"
 
 **Solution:**
+
 ```bash
 # Get release status
 helm status my-release
@@ -577,6 +585,7 @@ helm install my-release bitnami/nginx
 ### Issue: Chart validation errors
 
 **Solution:**
+
 ```bash
 # Lint the chart
 helm lint ./mychart
@@ -642,21 +651,22 @@ rm -rf ~/.local/share/helm
 
 ## Helm vs kubectl
 
-| Feature | kubectl | Helm |
-|---------|---------|------|
-| Package Management | No | Yes |
-| Templating | No | Yes |
-| Versioning | Manual | Built-in |
-| Rollback | Manual | Automatic |
-| Complexity | Simple apps | Complex apps |
-| Learning Curve | Lower | Higher |
-| Reusability | Limited | High |
+| Feature            | kubectl     | Helm         |
+| ------------------ | ----------- | ------------ |
+| Package Management | No          | Yes          |
+| Templating         | No          | Yes          |
+| Versioning         | Manual      | Built-in     |
+| Rollback           | Manual      | Automatic    |
+| Complexity         | Simple apps | Complex apps |
+| Learning Curve     | Lower       | Higher       |
+| Reusability        | Limited     | High         |
 
 ## Support
 
 For issues with:
+
 - **Helm tool**: Visit [Helm GitHub](https://github.com/helm/helm/issues)
-- **Installation script**: Open issue on [AWS Utilities GitHub](https://github.com/awsutils/awsutils.github.io/issues)
+- **Installation script**: Open issue on [awsutils GitHub](https://github.com/awsutils/awsutils.github.io/issues)
 
 ## Related Scripts
 

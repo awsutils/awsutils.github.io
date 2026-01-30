@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Configuration
 
-This guide covers advanced configuration options for AWS Utilities, including credential management, environment setup, and customization options.
+This guide covers advanced configuration options for awsutils, including credential management, environment setup, and customization options.
 
 ## AWS Credentials Configuration
 
@@ -13,15 +13,18 @@ This guide covers advanced configuration options for AWS Utilities, including cr
 The most common and secure method is using AWS CLI configuration files:
 
 **Location:**
+
 - Credentials: `~/.aws/credentials`
 - Configuration: `~/.aws/config`
 
 **Setup:**
+
 ```bash
 aws configure
 ```
 
 **Example `~/.aws/credentials`:**
+
 ```ini
 [default]
 aws_access_key_id = AKIAIOSFODNN7EXAMPLE
@@ -37,6 +40,7 @@ aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 ```
 
 **Example `~/.aws/config`:**
+
 ```ini
 [default]
 region = us-east-1
@@ -65,6 +69,7 @@ export AWS_PROFILE=production
 ```
 
 **Temporary session credentials:**
+
 ```bash
 export AWS_ACCESS_KEY_ID=ASIAIOSFODNN7EXAMPLE
 export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -76,16 +81,19 @@ export AWS_SESSION_TOKEN=AQoEXAMPLEH4aoAH0gNCAPy...
 When running on AWS compute services, use IAM roles:
 
 **For EC2:**
+
 1. Create an IAM role with required permissions
 2. Attach the role to your EC2 instance
 3. Credentials are automatically available
 
 **For ECS:**
+
 1. Define task execution role
 2. Specify in task definition
 3. Credentials injected automatically
 
 **For Lambda:**
+
 1. Create execution role
 2. Attach to Lambda function
 3. Credentials available via runtime
@@ -106,6 +114,7 @@ export AWS_PROFILE=my-sso-profile
 ```
 
 **Example SSO configuration in `~/.aws/config`:**
+
 ```ini
 [profile my-sso-profile]
 sso_start_url = https://my-sso-portal.awsapps.com/start
@@ -131,47 +140,47 @@ AWS SDK and CLI use credentials in this order:
 
 ### AWS Service Configuration
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `AWS_REGION` | AWS region for API calls | `us-east-1` |
-| `AWS_DEFAULT_REGION` | Fallback region | `us-west-2` |
-| `AWS_PROFILE` | Named profile to use | `production` |
-| `AWS_CONFIG_FILE` | Config file location | `~/.aws/custom-config` |
-| `AWS_SHARED_CREDENTIALS_FILE` | Credentials file location | `~/.aws/custom-creds` |
+| Variable                      | Description               | Example                |
+| ----------------------------- | ------------------------- | ---------------------- |
+| `AWS_REGION`                  | AWS region for API calls  | `us-east-1`            |
+| `AWS_DEFAULT_REGION`          | Fallback region           | `us-west-2`            |
+| `AWS_PROFILE`                 | Named profile to use      | `production`           |
+| `AWS_CONFIG_FILE`             | Config file location      | `~/.aws/custom-config` |
+| `AWS_SHARED_CREDENTIALS_FILE` | Credentials file location | `~/.aws/custom-creds`  |
 
 ### Authentication
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `AWS_ACCESS_KEY_ID` | Access key ID | `AKIAIOSFODNN7EXAMPLE` |
-| `AWS_SECRET_ACCESS_KEY` | Secret access key | `wJalrXUtnFEMI/...` |
-| `AWS_SESSION_TOKEN` | Session token (temp creds) | `AQoEXAMPLEH4...` |
-| `AWS_ROLE_ARN` | Role to assume | `arn:aws:iam::123:role/MyRole` |
-| `AWS_ROLE_SESSION_NAME` | Session name when assuming role | `my-session` |
+| Variable                | Description                     | Example                        |
+| ----------------------- | ------------------------------- | ------------------------------ |
+| `AWS_ACCESS_KEY_ID`     | Access key ID                   | `AKIAIOSFODNN7EXAMPLE`         |
+| `AWS_SECRET_ACCESS_KEY` | Secret access key               | `wJalrXUtnFEMI/...`            |
+| `AWS_SESSION_TOKEN`     | Session token (temp creds)      | `AQoEXAMPLEH4...`              |
+| `AWS_ROLE_ARN`          | Role to assume                  | `arn:aws:iam::123:role/MyRole` |
+| `AWS_ROLE_SESSION_NAME` | Session name when assuming role | `my-session`                   |
 
 ### SDK/CLI Behavior
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `AWS_DEFAULT_OUTPUT` | Output format | `json`, `yaml`, `text`, `table` |
-| `AWS_PAGER` | Pager for output | `less`, `more`, `` (disable) |
-| `AWS_MAX_ATTEMPTS` | Max retry attempts | `3` |
-| `AWS_RETRY_MODE` | Retry mode | `standard`, `adaptive` |
-| `AWS_METADATA_SERVICE_TIMEOUT` | Metadata timeout (seconds) | `5` |
-| `AWS_METADATA_SERVICE_NUM_ATTEMPTS` | Metadata retry attempts | `3` |
+| Variable                            | Description                | Example                         |
+| ----------------------------------- | -------------------------- | ------------------------------- |
+| `AWS_DEFAULT_OUTPUT`                | Output format              | `json`, `yaml`, `text`, `table` |
+| `AWS_PAGER`                         | Pager for output           | `less`, `more`, `` (disable)    |
+| `AWS_MAX_ATTEMPTS`                  | Max retry attempts         | `3`                             |
+| `AWS_RETRY_MODE`                    | Retry mode                 | `standard`, `adaptive`          |
+| `AWS_METADATA_SERVICE_TIMEOUT`      | Metadata timeout (seconds) | `5`                             |
+| `AWS_METADATA_SERVICE_NUM_ATTEMPTS` | Metadata retry attempts    | `3`                             |
 
 ### Debugging
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `AWS_DEBUG` | Enable debug logging | `1` |
-| `AWS_SDK_LOAD_CONFIG` | Load config from file | `1` |
+| Variable              | Description           | Example |
+| --------------------- | --------------------- | ------- |
+| `AWS_DEBUG`           | Enable debug logging  | `1`     |
+| `AWS_SDK_LOAD_CONFIG` | Load config from file | `1`     |
 
 ## Script-Specific Configuration
 
 ### Global Configuration File
 
-Create a global configuration file for AWS Utilities:
+Create a global configuration file for awsutils:
 
 **Location:** `~/.awsutils/config`
 
@@ -181,7 +190,7 @@ mkdir -p ~/.awsutils
 
 # Create config file
 cat > ~/.awsutils/config <<EOF
-# AWS Utilities Configuration
+# awsutils Configuration
 DEFAULT_REGION=us-east-1
 LOG_LEVEL=INFO
 DRY_RUN=false
@@ -199,6 +208,7 @@ Scripts can read configuration from:
 4. **Command-line arguments:** Override everything
 
 **Example script-specific config (`~/.awsutils/eksctl.conf`):**
+
 ```bash
 EKSCTL_VERSION=0.150.0
 INSTALL_DIR=/usr/local/bin
@@ -210,16 +220,19 @@ AUTO_UPDATE=true
 ### Setting Default Region
 
 **Via AWS CLI:**
+
 ```bash
 aws configure set region us-west-2
 ```
 
 **Via Environment Variable:**
+
 ```bash
 export AWS_DEFAULT_REGION=us-west-2
 ```
 
 **In Configuration File:**
+
 ```ini
 [default]
 region = us-west-2
@@ -228,16 +241,19 @@ region = us-west-2
 ### Using Multiple Regions
 
 **Script with region parameter:**
+
 ```bash
 ./script.sh --region us-east-1
 ```
 
 **Environment variable per invocation:**
+
 ```bash
 AWS_REGION=eu-west-1 ./script.sh
 ```
 
 **Loop through multiple regions:**
+
 ```bash
 for region in us-east-1 us-west-2 eu-west-1; do
     AWS_REGION=$region ./script.sh
@@ -249,6 +265,7 @@ done
 ### Configure MFA
 
 **In `~/.aws/config`:**
+
 ```ini
 [profile mfa]
 region = us-east-1
@@ -259,6 +276,7 @@ mfa_serial = arn:aws:iam::123456789012:mfa/username
 ### Using MFA with Scripts
 
 **Get temporary credentials:**
+
 ```bash
 aws sts get-session-token \
     --serial-number arn:aws:iam::123456789012:mfa/username \
@@ -266,6 +284,7 @@ aws sts get-session-token \
 ```
 
 **Set temporary credentials:**
+
 ```bash
 export AWS_ACCESS_KEY_ID=ASIAIOSFODNN7EXAMPLE
 export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/...
@@ -277,6 +296,7 @@ export AWS_SESSION_TOKEN=AQoEXAMPLEH4aoAH0gNCAPy...
 ### Configure Role Assumption
 
 **In `~/.aws/config`:**
+
 ```ini
 [profile assume-role]
 role_arn = arn:aws:iam::123456789012:role/MyRole
@@ -303,12 +323,14 @@ aws sts assume-role \
 ### Enable Logging
 
 **Environment variable:**
+
 ```bash
 export AWS_DEBUG=1
 export AWSUTILS_LOG_LEVEL=DEBUG
 ```
 
 **Script configuration:**
+
 ```bash
 # In script or config file
 LOG_FILE=~/.awsutils/logs/script.log
@@ -318,6 +340,7 @@ LOG_LEVEL=DEBUG  # DEBUG, INFO, WARN, ERROR
 ### Log Rotation
 
 **Using logrotate (`/etc/logrotate.d/awsutils`):**
+
 ```
 ~/.awsutils/logs/*.log {
     daily
@@ -342,11 +365,13 @@ export NO_PROXY=169.254.169.254,localhost,127.0.0.1
 ### AWS CLI Proxy
 
 **Via environment variables:**
+
 ```bash
 export AWS_CA_BUNDLE=/path/to/ca-bundle.crt
 ```
 
 **In `~/.aws/config`:**
+
 ```ini
 [default]
 ca_bundle = /path/to/ca-bundle.crt
@@ -381,6 +406,7 @@ export AWS_MAX_ATTEMPTS=5
 ### 1. File Permissions
 
 Protect credential files:
+
 ```bash
 chmod 600 ~/.aws/credentials
 chmod 600 ~/.aws/config
@@ -390,6 +416,7 @@ chmod 700 ~/.aws
 ### 2. Credential Rotation
 
 Rotate credentials regularly:
+
 ```bash
 # Create new access key
 aws iam create-access-key --user-name MyUser
@@ -405,6 +432,7 @@ aws iam delete-access-key --access-key-id OLD_KEY_ID --user-name MyUser
 ### 3. Use IAM Roles When Possible
 
 Prefer IAM roles over static credentials for:
+
 - EC2 instances
 - ECS tasks
 - Lambda functions
@@ -413,17 +441,17 @@ Prefer IAM roles over static credentials for:
 ### 4. Principle of Least Privilege
 
 Grant only necessary permissions:
+
 ```json
 {
   "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "s3:GetObject",
-      "s3:PutObject"
-    ],
-    "Resource": "arn:aws:s3:::my-bucket/*"
-  }]
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::my-bucket/*"
+    }
+  ]
 }
 ```
 
@@ -463,6 +491,7 @@ AWSUTILS_DEBUG=1 ./script.sh
 ### Common Issues
 
 **Issue: Credentials not found**
+
 ```bash
 # Check credential file exists
 ls -la ~/.aws/credentials
@@ -472,6 +501,7 @@ env | grep AWS
 ```
 
 **Issue: Wrong region**
+
 ```bash
 # Check configured region
 aws configure get region
@@ -481,6 +511,7 @@ aws configure set region us-east-1
 ```
 
 **Issue: Permission denied**
+
 ```bash
 # Check IAM permissions
 aws iam get-user

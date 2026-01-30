@@ -4,11 +4,11 @@ sidebar_position: 3
 
 # Getting Started
 
-This guide will help you get up and running with AWS Utilities quickly and efficiently.
+This guide will help you get up and running with awsutils quickly and efficiently.
 
 ## Overview
 
-AWS Utilities is a collection of tools and scripts designed to simplify common AWS operations. Whether you're managing infrastructure, automating deployments, or optimizing costs, these utilities can help streamline your workflow.
+awsutils is a collection of tools and scripts designed to simplify common AWS operations. Whether you're managing infrastructure, automating deployments, or optimizing costs, these utilities can help streamline your workflow.
 
 ## Prerequisites
 
@@ -27,11 +27,13 @@ You'll need an active AWS account. If you don't have one:
 Install the AWS Command Line Interface:
 
 **macOS:**
+
 ```bash
 brew install awscli
 ```
 
 **Linux:**
+
 ```bash
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
@@ -42,6 +44,7 @@ sudo ./aws/install
 Download and run the [AWS CLI MSI installer](https://awscli.amazonaws.com/AWSCLIV2.msi)
 
 Verify installation:
+
 ```bash
 aws --version
 ```
@@ -67,6 +70,7 @@ aws configure
 ```
 
 You'll be prompted to enter:
+
 - **AWS Access Key ID**: Your IAM user access key
 - **AWS Secret Access Key**: Your IAM user secret key
 - **Default region name**: e.g., `us-east-1`
@@ -92,6 +96,7 @@ aws ec2 describe-instances
 Install common dependencies used by the utilities:
 
 **jq (JSON processor):**
+
 ```bash
 # macOS
 brew install jq
@@ -104,6 +109,7 @@ sudo yum install jq
 ```
 
 **curl (if not already installed):**
+
 ```bash
 # Most systems have curl pre-installed
 curl --version
@@ -128,7 +134,7 @@ eksctl version
 
 ## Directory Structure
 
-When working with AWS Utilities locally:
+When working with awsutils locally:
 
 ```
 awsutils/
@@ -195,14 +201,14 @@ AWS_PROFILE=production ./script.sh
 
 ## Environment Variables
 
-Common environment variables used by AWS Utilities:
+Common environment variables used by awsutils:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `AWS_REGION` | AWS region to use | `us-east-1` |
-| `AWS_PROFILE` | Named AWS profile | `production` |
-| `AWS_DEFAULT_REGION` | Default region | `us-west-2` |
-| `AWS_ACCESS_KEY_ID` | Access key (not recommended) | `AKIAIOSFODNN7EXAMPLE` |
+| Variable                | Description                  | Example                     |
+| ----------------------- | ---------------------------- | --------------------------- |
+| `AWS_REGION`            | AWS region to use            | `us-east-1`                 |
+| `AWS_PROFILE`           | Named AWS profile            | `production`                |
+| `AWS_DEFAULT_REGION`    | Default region               | `us-west-2`                 |
+| `AWS_ACCESS_KEY_ID`     | Access key (not recommended) | `AKIAIOSFODNN7EXAMPLE`      |
 | `AWS_SECRET_ACCESS_KEY` | Secret key (not recommended) | `wJalrXUtnFEMI/K7MDENG/...` |
 
 ## Security Best Practices
@@ -219,6 +225,7 @@ Common environment variables used by AWS Utilities:
 ### Issue: "Unable to locate credentials"
 
 **Solution:**
+
 ```bash
 # Re-run AWS configure
 aws configure
@@ -232,6 +239,7 @@ export AWS_DEFAULT_REGION=us-east-1
 ### Issue: "Access Denied"
 
 **Solution:**
+
 - Check your IAM user permissions
 - Verify you're using the correct AWS profile
 - Ensure the resource exists in the specified region
@@ -239,6 +247,7 @@ export AWS_DEFAULT_REGION=us-east-1
 ### Issue: "Region not specified"
 
 **Solution:**
+
 ```bash
 # Set default region
 aws configure set region us-east-1
@@ -304,4 +313,4 @@ alias awsprofile='echo $AWS_PROFILE'
 
 ## Conclusion
 
-You're now ready to use AWS Utilities effectively. Start with simple scripts and gradually explore more advanced features as you become comfortable with the tools.
+You're now ready to use awsutils effectively. Start with simple scripts and gradually explore more advanced features as you become comfortable with the tools.

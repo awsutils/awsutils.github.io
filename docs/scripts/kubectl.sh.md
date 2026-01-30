@@ -97,6 +97,7 @@ kubectl --help
 ### Connecting to a Cluster
 
 **For Amazon EKS:**
+
 ```bash
 # Update kubeconfig for EKS cluster
 aws eks update-kubeconfig --name my-cluster --region us-east-1
@@ -106,6 +107,7 @@ kubectl get nodes
 ```
 
 **For other Kubernetes clusters:**
+
 ```bash
 # Set kubeconfig file location
 export KUBECONFIG=~/.kube/config
@@ -280,14 +282,13 @@ IAM permissions needed to access EKS:
 ```json
 {
   "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "eks:DescribeCluster",
-      "eks:ListClusters"
-    ],
-    "Resource": "*"
-  }]
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["eks:DescribeCluster", "eks:ListClusters"],
+      "Resource": "*"
+    }
+  ]
 }
 ```
 
@@ -302,9 +303,9 @@ metadata:
   namespace: my-app
   name: pod-reader
 rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -312,9 +313,9 @@ metadata:
   name: read-pods
   namespace: my-app
 subjects:
-- kind: User
-  name: my-user
-  apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: my-user
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
   name: pod-reader
@@ -326,6 +327,7 @@ roleRef:
 ### Issue: "kubectl: command not found"
 
 **Solution:**
+
 ```bash
 # Check installation
 which kubectl
@@ -344,6 +346,7 @@ source ~/.bashrc
 ### Issue: "The connection to the server was refused"
 
 **Solution:**
+
 ```bash
 # Check kubeconfig
 kubectl config view
@@ -361,6 +364,7 @@ kubectl get nodes
 ### Issue: "error: You must be logged in to the server (Unauthorized)"
 
 **Solution:**
+
 ```bash
 # Check current context
 kubectl config current-context
@@ -378,6 +382,7 @@ aws eks update-kubeconfig --name my-cluster --region us-east-1
 ### Issue: "Error from server (Forbidden)"
 
 **Solution:**
+
 ```bash
 # Check RBAC permissions
 kubectl auth can-i get pods
@@ -504,8 +509,9 @@ alias kgdn='kubectl get deployments -n'
 ## Support
 
 For issues with:
+
 - **kubectl tool**: Visit [Kubernetes GitHub](https://github.com/kubernetes/kubectl/issues)
-- **Installation script**: Open issue on [AWS Utilities GitHub](https://github.com/awsutils/awsutils.github.io/issues)
+- **Installation script**: Open issue on [awsutils GitHub](https://github.com/awsutils/awsutils.github.io/issues)
 
 ## Related Scripts
 

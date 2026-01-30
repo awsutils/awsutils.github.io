@@ -4,13 +4,14 @@ sidebar_position: 5
 
 # Best Practices
 
-This guide outlines best practices for using AWS Utilities effectively, securely, and efficiently.
+This guide outlines best practices for using awsutils effectively, securely, and efficiently.
 
 ## Security Best Practices
 
 ### 1. Credential Management
 
 **DO:**
+
 - Use IAM roles whenever possible (EC2, ECS, Lambda, EKS)
 - Store credentials in `~/.aws/credentials` with proper file permissions
 - Use AWS SSO for enterprise environments
@@ -18,6 +19,7 @@ This guide outlines best practices for using AWS Utilities effectively, securely
 - Enable MFA for privileged accounts
 
 **DON'T:**
+
 - Hardcode credentials in scripts or configuration files
 - Commit credentials to version control
 - Share credentials between users or services
@@ -41,21 +43,21 @@ Grant only the minimum permissions required:
 ```json
 {
   "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "s3:GetObject",
-      "s3:ListBucket"
-    ],
-    "Resource": [
-      "arn:aws:s3:::my-specific-bucket",
-      "arn:aws:s3:::my-specific-bucket/*"
-    ]
-  }]
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::my-specific-bucket",
+        "arn:aws:s3:::my-specific-bucket/*"
+      ]
+    }
+  ]
 }
 ```
 
 **Tips:**
+
 - Start with read-only permissions
 - Add write permissions only when needed
 - Use condition keys to further restrict access
@@ -88,6 +90,7 @@ aws ec2 create-tags \
 ```
 
 **Recommended tag schema:**
+
 - `Environment`: `Production`, `Staging`, `Development`
 - `Owner`: Team or individual responsible
 - `Project`: Project name
@@ -576,15 +579,19 @@ Track changes to scripts:
 # Changelog
 
 ## [1.2.0] - 2024-01-15
+
 ### Added
+
 - Support for multiple regions
 - Retry logic for transient failures
 
 ### Changed
+
 - Improved error messages
 - Updated AWS CLI commands to v2 syntax
 
 ### Fixed
+
 - Fixed issue with special characters in bucket names
 ```
 

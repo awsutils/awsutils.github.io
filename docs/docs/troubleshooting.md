@@ -4,27 +4,31 @@ sidebar_position: 6
 
 # Troubleshooting
 
-This guide helps you diagnose and resolve common issues when using AWS Utilities.
+This guide helps you diagnose and resolve common issues when using awsutils.
 
 ## General Troubleshooting Steps
 
 1. **Enable verbose/debug mode**
+
    ```bash
    ./script.sh --verbose
    AWS_DEBUG=1 ./script.sh
    ```
 
 2. **Check AWS CLI version**
+
    ```bash
    aws --version
    ```
 
 3. **Verify credentials**
+
    ```bash
    aws sts get-caller-identity
    ```
 
 4. **Check region configuration**
+
    ```bash
    aws configure get region
    echo $AWS_DEFAULT_REGION
@@ -40,11 +44,13 @@ This guide helps you diagnose and resolve common issues when using AWS Utilities
 ### Issue: "Unable to locate credentials"
 
 **Symptoms:**
+
 ```
 Unable to locate credentials. You can configure credentials by running "aws configure".
 ```
 
 **Causes:**
+
 - AWS CLI not configured
 - Credentials file missing or corrupted
 - Environment variables not set
@@ -53,17 +59,20 @@ Unable to locate credentials. You can configure credentials by running "aws conf
 **Solutions:**
 
 1. **Configure AWS CLI:**
+
    ```bash
    aws configure
    ```
 
 2. **Check credentials file:**
+
    ```bash
    cat ~/.aws/credentials
    ls -la ~/.aws/
    ```
 
 3. **Verify environment variables:**
+
    ```bash
    echo $AWS_ACCESS_KEY_ID
    echo $AWS_SECRET_ACCESS_KEY
@@ -71,6 +80,7 @@ Unable to locate credentials. You can configure credentials by running "aws conf
    ```
 
 4. **Test with explicit profile:**
+
    ```bash
    aws sts get-caller-identity --profile default
    ```
@@ -84,11 +94,13 @@ Unable to locate credentials. You can configure credentials by running "aws conf
 ### Issue: "The security token included in the request is invalid"
 
 **Symptoms:**
+
 ```
 An error occurred (InvalidToken) when calling the GetCallerIdentity operation: The security token included in the request is invalid.
 ```
 
 **Causes:**
+
 - Expired temporary credentials
 - Invalid session token
 - Credentials from different account
@@ -96,6 +108,7 @@ An error occurred (InvalidToken) when calling the GetCallerIdentity operation: T
 **Solutions:**
 
 1. **Refresh temporary credentials:**
+
    ```bash
    # If using AWS SSO
    aws sso login --profile your-profile
@@ -106,6 +119,7 @@ An error occurred (InvalidToken) when calling the GetCallerIdentity operation: T
    ```
 
 2. **Clear session token:**
+
    ```bash
    unset AWS_SESSION_TOKEN
    unset AWS_ACCESS_KEY_ID
@@ -120,6 +134,7 @@ An error occurred (InvalidToken) when calling the GetCallerIdentity operation: T
 ### Issue: "The security token included in the request is expired"
 
 **Symptoms:**
+
 ```
 An error occurred (ExpiredToken) when calling the [Operation] operation: The security token included in the request is expired
 ```
@@ -127,12 +142,14 @@ An error occurred (ExpiredToken) when calling the [Operation] operation: The sec
 **Solutions:**
 
 1. **For temporary credentials:**
+
    ```bash
    # Get new temporary credentials
    aws sts get-session-token --duration-seconds 3600
    ```
 
 2. **For AWS SSO:**
+
    ```bash
    aws sso login --profile your-profile
    ```
@@ -148,11 +165,13 @@ An error occurred (ExpiredToken) when calling the [Operation] operation: The sec
 ### Issue: "Access Denied" or "UnauthorizedException"
 
 **Symptoms:**
+
 ```
 An error occurred (AccessDenied) when calling the [Operation] operation: User: arn:aws:iam::123456789012:user/username is not authorized to perform: [action] on resource: [resource]
 ```
 
 **Causes:**
+
 - Insufficient IAM permissions
 - Wrong AWS account
 - Resource policy restrictions
@@ -161,11 +180,13 @@ An error occurred (AccessDenied) when calling the [Operation] operation: User: a
 **Solutions:**
 
 1. **Check current identity:**
+
    ```bash
    aws sts get-caller-identity
    ```
 
 2. **Review IAM policies:**
+
    ```bash
    # List attached policies
    aws iam list-attached-user-policies --user-name YOUR_USERNAME
@@ -177,6 +198,7 @@ An error occurred (AccessDenied) when calling the [Operation] operation: User: a
    ```
 
 3. **Test specific permission:**
+
    ```bash
    aws iam simulate-principal-policy \
        --policy-source-arn arn:aws:iam::123456789012:user/username \
@@ -185,6 +207,7 @@ An error occurred (AccessDenied) when calling the [Operation] operation: User: a
    ```
 
 4. **Check resource-based policies:**
+
    ```bash
    # S3 bucket policy
    aws s3api get-bucket-policy --bucket bucket-name
@@ -204,11 +227,13 @@ An error occurred (AccessDenied) when calling the [Operation] operation: User: a
 ### Issue: "Could not connect to the endpoint URL"
 
 **Symptoms:**
+
 ```
 Could not connect to the endpoint URL: "https://service.region.amazonaws.com/"
 ```
 
 **Causes:**
+
 - Invalid region name
 - Service not available in region
 - Network connectivity issues
@@ -217,23 +242,27 @@ Could not connect to the endpoint URL: "https://service.region.amazonaws.com/"
 **Solutions:**
 
 1. **Check available regions:**
+
    ```bash
    aws ec2 describe-regions --output table
    ```
 
 2. **Verify region configuration:**
+
    ```bash
    aws configure get region
    echo $AWS_DEFAULT_REGION
    ```
 
 3. **Set region explicitly:**
+
    ```bash
    export AWS_DEFAULT_REGION=us-east-1
    aws configure set region us-east-1
    ```
 
 4. **Check service availability:**
+
    ```bash
    # List regions where service is available
    aws ec2 describe-regions --all-regions \
@@ -248,11 +277,13 @@ Could not connect to the endpoint URL: "https://service.region.amazonaws.com/"
 ### Issue: "The resource you requested does not exist"
 
 **Symptoms:**
+
 ```
 An error occurred (NoSuchEntity) when calling the [Operation] operation: The resource you requested does not exist.
 ```
 
 **Causes:**
+
 - Resource in different region
 - Resource doesn't exist
 - Wrong resource identifier
@@ -260,6 +291,7 @@ An error occurred (NoSuchEntity) when calling the [Operation] operation: The res
 **Solutions:**
 
 1. **Check all regions:**
+
    ```bash
    for region in $(aws ec2 describe-regions --query 'Regions[].RegionName' --output text); do
        echo "Checking $region..."
@@ -268,6 +300,7 @@ An error occurred (NoSuchEntity) when calling the [Operation] operation: The res
    ```
 
 2. **Verify resource exists:**
+
    ```bash
    # List resources
    aws ec2 describe-instances --region us-east-1
@@ -284,12 +317,14 @@ An error occurred (NoSuchEntity) when calling the [Operation] operation: The res
 ### Issue: "Connection timeout" or "Connection refused"
 
 **Symptoms:**
+
 ```
 Connect timeout on endpoint URL
 Connection refused
 ```
 
 **Causes:**
+
 - Network connectivity issues
 - Firewall blocking AWS API calls
 - Proxy configuration issues
@@ -298,24 +333,28 @@ Connection refused
 **Solutions:**
 
 1. **Test internet connectivity:**
+
    ```bash
    ping -c 3 aws.amazon.com
    curl -I https://aws.amazon.com
    ```
 
 2. **Check AWS endpoints:**
+
    ```bash
    nc -zv ec2.us-east-1.amazonaws.com 443
    telnet ec2.us-east-1.amazonaws.com 443
    ```
 
 3. **Verify DNS resolution:**
+
    ```bash
    nslookup ec2.us-east-1.amazonaws.com
    dig ec2.us-east-1.amazonaws.com
    ```
 
 4. **Check proxy settings:**
+
    ```bash
    echo $HTTP_PROXY
    echo $HTTPS_PROXY
@@ -334,12 +373,14 @@ Connection refused
 ### Issue: "SSL validation failed"
 
 **Symptoms:**
+
 ```
 SSL validation failed
 certificate verify failed
 ```
 
 **Causes:**
+
 - Outdated CA certificates
 - Corporate proxy intercepting SSL
 - System clock skew
@@ -347,6 +388,7 @@ certificate verify failed
 **Solutions:**
 
 1. **Update CA certificates:**
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get update
@@ -357,12 +399,14 @@ certificate verify failed
    ```
 
 2. **Set CA bundle:**
+
    ```bash
    export AWS_CA_BUNDLE=/path/to/ca-bundle.crt
    aws configure set ca_bundle /path/to/ca-bundle.crt
    ```
 
 3. **Check system time:**
+
    ```bash
    date
    # Sync time if needed
@@ -379,6 +423,7 @@ certificate verify failed
 ### Issue: "Command not found"
 
 **Symptoms:**
+
 ```
 bash: script.sh: command not found
 bash: aws: command not found
@@ -387,23 +432,27 @@ bash: aws: command not found
 **Solutions:**
 
 1. **Make script executable:**
+
    ```bash
    chmod +x script.sh
    ```
 
 2. **Use correct path:**
+
    ```bash
    ./script.sh  # Current directory
    /path/to/script.sh  # Absolute path
    ```
 
 3. **Check PATH variable:**
+
    ```bash
    echo $PATH
    which aws
    ```
 
 4. **Install missing tools:**
+
    ```bash
    # AWS CLI
    pip install awscli
@@ -416,6 +465,7 @@ bash: aws: command not found
 ### Issue: "Permission denied" when executing script
 
 **Symptoms:**
+
 ```
 bash: ./script.sh: Permission denied
 ```
@@ -423,11 +473,13 @@ bash: ./script.sh: Permission denied
 **Solutions:**
 
 1. **Add execute permissions:**
+
    ```bash
    chmod +x script.sh
    ```
 
 2. **Run with bash explicitly:**
+
    ```bash
    bash script.sh
    ```
@@ -441,6 +493,7 @@ bash: ./script.sh: Permission denied
 ### Issue: "Syntax error" or "Unexpected token"
 
 **Symptoms:**
+
 ```
 syntax error near unexpected token
 bad interpreter: No such file or directory
@@ -449,17 +502,20 @@ bad interpreter: No such file or directory
 **Solutions:**
 
 1. **Check shebang:**
+
    ```bash
    head -1 script.sh
    # Should be: #!/bin/bash or #!/usr/bin/env bash
    ```
 
 2. **Verify bash version:**
+
    ```bash
    bash --version
    ```
 
 3. **Check line endings:**
+
    ```bash
    # Convert Windows CRLF to Unix LF
    dos2unix script.sh
@@ -478,6 +534,7 @@ bad interpreter: No such file or directory
 ### Issue: "AWS CLI command too slow"
 
 **Causes:**
+
 - Large result sets
 - Network latency
 - Inefficient queries
@@ -485,11 +542,13 @@ bad interpreter: No such file or directory
 **Solutions:**
 
 1. **Use pagination:**
+
    ```bash
    aws s3api list-objects-v2 --bucket my-bucket --max-items 100
    ```
 
 2. **Use filters:**
+
    ```bash
    aws ec2 describe-instances \
        --filters "Name=instance-state-name,Values=running" \
@@ -497,6 +556,7 @@ bad interpreter: No such file or directory
    ```
 
 3. **Increase timeout:**
+
    ```bash
    aws configure set cli_read_timeout 60
    ```
@@ -509,6 +569,7 @@ bad interpreter: No such file or directory
 ### Issue: "Invalid JSON" errors
 
 **Symptoms:**
+
 ```
 Error parsing parameter: Invalid JSON
 ```
@@ -516,11 +577,13 @@ Error parsing parameter: Invalid JSON
 **Solutions:**
 
 1. **Validate JSON:**
+
    ```bash
    cat config.json | jq .
    ```
 
 2. **Use file:// prefix:**
+
    ```bash
    aws iam put-role-policy --policy-document file://policy.json
    ```
@@ -533,6 +596,7 @@ Error parsing parameter: Invalid JSON
 ### Issue: "Rate exceeded" or "Throttling"
 
 **Symptoms:**
+
 ```
 An error occurred (Throttling) when calling the [Operation] operation: Rate exceeded
 ```
@@ -540,6 +604,7 @@ An error occurred (Throttling) when calling the [Operation] operation: Rate exce
 **Solutions:**
 
 1. **Implement exponential backoff:**
+
    ```bash
    retry_with_backoff() {
        local max_attempts=5
@@ -560,6 +625,7 @@ An error occurred (Throttling) when calling the [Operation] operation: Rate exce
    ```
 
 2. **Add delays between calls:**
+
    ```bash
    for item in $items; do
        aws ec2 describe-instances --instance-ids $item
@@ -568,6 +634,7 @@ An error occurred (Throttling) when calling the [Operation] operation: Rate exce
    ```
 
 3. **Request limit increase:**
+
    ```bash
    # Check current limits
    aws service-quotas get-service-quota \
@@ -586,6 +653,7 @@ An error occurred (Throttling) when calling the [Operation] operation: Rate exce
 ### S3 Issues
 
 **Issue: "NoSuchBucket"**
+
 ```bash
 # Verify bucket exists
 aws s3 ls s3://bucket-name
@@ -595,6 +663,7 @@ aws s3api get-bucket-location --bucket bucket-name
 ```
 
 **Issue: "AccessDenied on S3 operation"**
+
 ```bash
 # Check bucket policy
 aws s3api get-bucket-policy --bucket bucket-name
@@ -609,6 +678,7 @@ aws s3api get-public-access-block --bucket bucket-name
 ### EC2 Issues
 
 **Issue: "InvalidInstanceID.NotFound"**
+
 ```bash
 # List instances in region
 aws ec2 describe-instances --region us-east-1
@@ -622,6 +692,7 @@ done
 ### IAM Issues
 
 **Issue: "EntityAlreadyExists"**
+
 ```bash
 # Check if user/role exists
 aws iam get-user --user-name username
@@ -709,16 +780,16 @@ curl -s https://status.aws.amazon.com/ | grep -i "service is operating normally"
 
 ## Common Error Codes
 
-| Error Code | Meaning | Common Solution |
-|------------|---------|-----------------|
-| `InvalidClientTokenId` | Invalid access key | Verify credentials |
-| `SignatureDoesNotMatch` | Incorrect secret key or time skew | Check secret key, sync time |
-| `AccessDenied` | Insufficient permissions | Review IAM policies |
-| `UnauthorizedOperation` | Action not allowed | Check IAM permissions |
-| `ResourceNotFoundException` | Resource doesn't exist | Verify resource ID/name and region |
-| `ThrottlingException` | Too many requests | Implement backoff/retry |
-| `ServiceUnavailable` | AWS service issue | Wait and retry |
-| `InvalidParameterValue` | Invalid parameter | Check parameter format |
+| Error Code                  | Meaning                           | Common Solution                    |
+| --------------------------- | --------------------------------- | ---------------------------------- |
+| `InvalidClientTokenId`      | Invalid access key                | Verify credentials                 |
+| `SignatureDoesNotMatch`     | Incorrect secret key or time skew | Check secret key, sync time        |
+| `AccessDenied`              | Insufficient permissions          | Review IAM policies                |
+| `UnauthorizedOperation`     | Action not allowed                | Check IAM permissions              |
+| `ResourceNotFoundException` | Resource doesn't exist            | Verify resource ID/name and region |
+| `ThrottlingException`       | Too many requests                 | Implement backoff/retry            |
+| `ServiceUnavailable`        | AWS service issue                 | Wait and retry                     |
+| `InvalidParameterValue`     | Invalid parameter                 | Check parameter format             |
 
 ## Next Steps
 

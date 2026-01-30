@@ -4,7 +4,7 @@ sidebar_position: 7
 
 # Contributing
 
-Thank you for your interest in contributing to AWS Utilities! This guide will help you get started with contributing to the project.
+Thank you for your interest in contributing to awsutils! This guide will help you get started with contributing to the project.
 
 ## Code of Conduct
 
@@ -18,7 +18,7 @@ We are committed to providing a welcoming and inclusive environment. All contrib
 
 ## Ways to Contribute
 
-There are many ways to contribute to AWS Utilities:
+There are many ways to contribute to awsutils:
 
 ### 1. Report Bugs
 
@@ -33,28 +33,35 @@ Found a bug? Help us fix it:
   - Any relevant logs or error messages
 
 **Bug Report Template:**
+
 ```markdown
 ## Description
+
 Brief description of the issue
 
 ## Steps to Reproduce
+
 1. Step one
 2. Step two
 3. Step three
 
 ## Expected Behavior
+
 What you expected to happen
 
 ## Actual Behavior
+
 What actually happened
 
 ## Environment
+
 - OS: [e.g., Ubuntu 22.04, macOS 13.0]
 - AWS CLI Version: [e.g., 2.13.0]
 - Script/Tool: [e.g., eksctl.sh]
 - AWS Region: [e.g., us-east-1]
 
 ## Additional Context
+
 Any other relevant information, logs, or screenshots
 ```
 
@@ -69,17 +76,22 @@ Have an idea for improvement?
 - Discuss alternatives you've considered
 
 **Feature Request Template:**
+
 ```markdown
 ## Problem Statement
+
 What problem does this feature solve?
 
 ## Proposed Solution
+
 Describe your proposed solution
 
 ## Alternatives Considered
+
 What other solutions did you consider?
 
 ## Additional Context
+
 Any other relevant information
 ```
 
@@ -113,12 +125,14 @@ Before you start contributing, ensure you have:
 1. **Fork the repository** on GitHub
 
 2. **Clone your fork:**
+
    ```bash
    git clone https://github.com/YOUR-USERNAME/awsutils.github.io.git
    cd awsutils.github.io
    ```
 
 3. **Add upstream remote:**
+
    ```bash
    git remote add upstream https://github.com/awsutils/awsutils.github.io.git
    ```
@@ -131,11 +145,13 @@ Before you start contributing, ensure you have:
 ### Set Up Development Environment
 
 1. **Install dependencies (for documentation):**
+
    ```bash
    npm install
    ```
 
 2. **Start local development server:**
+
    ```bash
    npm start
    ```
@@ -164,6 +180,7 @@ git checkout -b fix/bug-description
 ```
 
 **Branch naming conventions:**
+
 - `feature/feature-name` - New features
 - `fix/bug-description` - Bug fixes
 - `docs/description` - Documentation changes
@@ -181,6 +198,7 @@ git checkout -b fix/bug-description
 - Make scripts idempotent when possible
 
 **Script template:**
+
 ```bash
 #!/bin/bash
 set -euo pipefail
@@ -345,12 +363,14 @@ Fixes #123"
 ```
 
 **Commit message guidelines:**
+
 - Use present tense ("Add feature" not "Added feature")
 - Keep first line under 72 characters
 - Provide detailed description after blank line
 - Reference issues and PRs when applicable
 
 **Commit message examples:**
+
 ```
 Add S3 bucket backup script
 
@@ -387,11 +407,14 @@ git push origin feature/your-feature-name
 5. Submit the pull request
 
 **Pull Request Template:**
+
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Documentation update
@@ -399,9 +422,11 @@ Brief description of changes
 - [ ] Other (please describe)
 
 ## Testing
+
 Describe how you tested your changes
 
 ## Checklist
+
 - [ ] Code follows project style guidelines
 - [ ] Self-review completed
 - [ ] Comments added for complex code
@@ -411,9 +436,11 @@ Describe how you tested your changes
 - [ ] All tests pass locally
 
 ## Related Issues
+
 Fixes #(issue number)
 
 ## Screenshots (if applicable)
+
 Add screenshots to help explain your changes
 ```
 
@@ -431,6 +458,7 @@ Add screenshots to help explain your changes
 - Use UPPERCASE for constants and environment variables
 
 **Example:**
+
 ```bash
 #!/bin/bash
 set -euo pipefail
@@ -557,4 +585,4 @@ If you have questions about contributing:
 - Ask in GitHub Discussions
 - Contact maintainers
 
-Thank you for contributing to AWS Utilities! Your contributions help make cloud automation easier for everyone.
+Thank you for contributing to awsutils! Your contributions help make cloud automation easier for everyone.

@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Scripts Overview
 
-Welcome to the AWS Utilities Scripts documentation. This section contains detailed information about all available scripts and tools.
+Welcome to the awsutils Scripts documentation. This section contains detailed information about all available scripts and tools.
 
 ## Available Scripts
 
@@ -17,6 +17,7 @@ Scripts to help you install and configure AWS tools and utilities.
 Install eksctl, a CLI tool for creating and managing Kubernetes clusters on Amazon EKS.
 
 **Quick Install:**
+
 ```bash
 curl https://awsutils.github.io/eksctl.sh | sh
 ```
@@ -99,6 +100,7 @@ curl https://awsutils.github.io/[script-name] | sh
 ```
 
 **Example:**
+
 ```bash
 curl https://awsutils.github.io/eksctl.sh | sh
 ```
@@ -141,16 +143,16 @@ cd scripts
 
 Most scripts support these standard options:
 
-| Option | Description |
-|--------|-------------|
-| `--help`, `-h` | Display help information |
-| `--version`, `-v` | Show version information |
-| `--dry-run`, `-d` | Simulate execution without making changes |
-| `--verbose` | Enable detailed output |
-| `--region REGION` | Specify AWS region |
-| `--profile PROFILE` | Use specific AWS profile |
-| `--force`, `-f` | Skip confirmation prompts |
-| `--quiet`, `-q` | Suppress non-error output |
+| Option              | Description                               |
+| ------------------- | ----------------------------------------- |
+| `--help`, `-h`      | Display help information                  |
+| `--version`, `-v`   | Show version information                  |
+| `--dry-run`, `-d`   | Simulate execution without making changes |
+| `--verbose`         | Enable detailed output                    |
+| `--region REGION`   | Specify AWS region                        |
+| `--profile PROFILE` | Use specific AWS profile                  |
+| `--force`, `-f`     | Skip confirmation prompts                 |
+| `--quiet`, `-q`     | Suppress non-error output                 |
 
 **Examples:**
 
@@ -206,6 +208,7 @@ aws sts get-caller-identity
 ### 3. Required Tools
 
 Common dependencies:
+
 - **bash** (version 4+)
 - **curl** or **wget**
 - **jq** (JSON processor)
@@ -227,6 +230,7 @@ sudo yum install jq
 Scripts require different permissions based on functionality. Check individual script documentation for specific requirements.
 
 **Basic permissions most scripts need:**
+
 - `sts:GetCallerIdentity` - Verify credentials
 - Service-specific read/write permissions
 
@@ -288,14 +292,14 @@ git commit -m "Initial configuration"
 
 Scripts respect these common environment variables:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `AWS_REGION` | Default AWS region | `us-east-1` |
-| `AWS_PROFILE` | AWS profile to use | `production` |
-| `AWS_DEFAULT_REGION` | Fallback region | `us-west-2` |
-| `AWSUTILS_DEBUG` | Enable debug mode | `true` |
-| `AWSUTILS_DRY_RUN` | Enable dry run | `true` |
-| `AWSUTILS_LOG_LEVEL` | Logging level | `INFO`, `DEBUG` |
+| Variable             | Description        | Example         |
+| -------------------- | ------------------ | --------------- |
+| `AWS_REGION`         | Default AWS region | `us-east-1`     |
+| `AWS_PROFILE`        | AWS profile to use | `production`    |
+| `AWS_DEFAULT_REGION` | Fallback region    | `us-west-2`     |
+| `AWSUTILS_DEBUG`     | Enable debug mode  | `true`          |
+| `AWSUTILS_DRY_RUN`   | Enable dry run     | `true`          |
+| `AWSUTILS_LOG_LEVEL` | Logging level      | `INFO`, `DEBUG` |
 
 **Usage:**
 
@@ -374,14 +378,13 @@ Use IAM roles/policies with minimum required permissions:
 ```json
 {
   "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "ec2:DescribeInstances",
-      "ec2:DescribeRegions"
-    ],
-    "Resource": "*"
-  }]
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["ec2:DescribeInstances", "ec2:DescribeRegions"],
+      "Resource": "*"
+    }
+  ]
 }
 ```
 
@@ -409,6 +412,7 @@ aws cloudtrail lookup-events --max-results 10
 ### Common Issues
 
 **Script not found:**
+
 ```bash
 # Ensure script is executable
 chmod +x script.sh
@@ -418,6 +422,7 @@ chmod +x script.sh
 ```
 
 **Permission denied:**
+
 ```bash
 # Check IAM permissions
 aws iam get-user
@@ -427,6 +432,7 @@ aws sts get-caller-identity
 ```
 
 **Command not found:**
+
 ```bash
 # Check if tool is installed
 which aws
@@ -470,6 +476,7 @@ Want to add your own script? We welcome contributions!
 4. Submit a pull request
 
 **Script must include:**
+
 - Clear description and usage
 - Help text (`--help`)
 - Error handling
@@ -495,6 +502,7 @@ Scripts are regularly updated with:
 - Performance improvements
 
 **Stay updated:**
+
 ```bash
 # Clone repository
 git clone https://github.com/awsutils/awsutils.github.io.git
@@ -505,6 +513,7 @@ git pull
 ```
 
 **Release notifications:**
+
 - Watch the repository on GitHub
 - Subscribe to release notifications
 - Check the changelog

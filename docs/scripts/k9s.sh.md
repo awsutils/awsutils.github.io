@@ -127,42 +127,42 @@ k9s --kubeconfig ~/.kube/custom-config
 
 ### Navigation
 
-| Key | Action |
-|-----|--------|
-| `?` | Show help/keyboard shortcuts |
-| `:` | Enter command mode |
-| `/` | Filter/search |
-| `Esc` | Exit/back |
-| `Ctrl+a` | Show all available resources |
-| `Ctrl+d` | Delete resource |
-| `Ctrl+k` | Kill pod/process |
-| `0-9` | Switch to namespace (if configured) |
+| Key      | Action                              |
+| -------- | ----------------------------------- |
+| `?`      | Show help/keyboard shortcuts        |
+| `:`      | Enter command mode                  |
+| `/`      | Filter/search                       |
+| `Esc`    | Exit/back                           |
+| `Ctrl+a` | Show all available resources        |
+| `Ctrl+d` | Delete resource                     |
+| `Ctrl+k` | Kill pod/process                    |
+| `0-9`    | Switch to namespace (if configured) |
 
 ### Resource Management
 
-| Key | Action |
-|-----|--------|
-| `d` | Describe resource |
-| `e` | Edit resource |
-| `l` | View logs |
-| `y` | View YAML |
-| `s` | Shell into container |
-| `f` | Port forward |
-| `ctrl+d` | Delete resource |
-| `ctrl+l` | Toggle live logs |
+| Key      | Action               |
+| -------- | -------------------- |
+| `d`      | Describe resource    |
+| `e`      | Edit resource        |
+| `l`      | View logs            |
+| `y`      | View YAML            |
+| `s`      | Shell into container |
+| `f`      | Port forward         |
+| `ctrl+d` | Delete resource      |
+| `ctrl+l` | Toggle live logs     |
 
 ### Views
 
-| Key | Action |
-|-----|--------|
-| `:pods` | Show pods |
-| `:deployments` | Show deployments |
-| `:services` | Show services |
-| `:nodes` | Show nodes |
-| `:namespaces` | Show namespaces |
-| `:pv` | Show persistent volumes |
-| `:pvc` | Show persistent volume claims |
-| `:events` | Show events |
+| Key            | Action                        |
+| -------------- | ----------------------------- |
+| `:pods`        | Show pods                     |
+| `:deployments` | Show deployments              |
+| `:services`    | Show services                 |
+| `:nodes`       | Show nodes                    |
+| `:namespaces`  | Show namespaces               |
+| `:pv`          | Show persistent volumes       |
+| `:pvc`         | Show persistent volume claims |
+| `:events`      | Show events                   |
 
 ## Common Use Cases
 
@@ -391,6 +391,7 @@ Cluster sanitization reports:
 ### Issue: "k9s: command not found"
 
 **Solution:**
+
 ```bash
 # Check installation
 which k9s
@@ -409,6 +410,7 @@ source ~/.bashrc
 ### Issue: "Unable to connect to cluster"
 
 **Solution:**
+
 ```bash
 # Verify kubectl is configured
 kubectl cluster-info
@@ -426,6 +428,7 @@ k9s --context my-context
 ### Issue: "Unauthorized" or "Forbidden" errors
 
 **Solution:**
+
 ```bash
 # Check RBAC permissions
 kubectl auth can-i get pods --all-namespaces
@@ -439,6 +442,7 @@ k9s --readonly
 ### Issue: k9s crashes or hangs
 
 **Solution:**
+
 ```bash
 # Check logs
 cat ~/.config/k9s/k9s.log
@@ -456,6 +460,7 @@ k9s
 ### Issue: Missing metrics
 
 **Solution:**
+
 ```bash
 # Verify metrics-server is installed
 kubectl get deployment metrics-server -n kube-system
@@ -545,21 +550,22 @@ rm ~/bin/k9s
 
 ## Comparison with kubectl
 
-| Feature | kubectl | k9s |
-|---------|---------|-----|
-| Interface | CLI | Terminal UI |
-| Learning Curve | Steeper | Gentler |
-| Speed | Command-based | Visual navigation |
-| Log Viewing | Limited | Excellent |
-| Resource Editing | YAML editor required | Built-in editor |
-| Multi-tasking | Requires multiple terminals | Single interface |
-| Scripting | Excellent | Not designed for it |
+| Feature          | kubectl                     | k9s                 |
+| ---------------- | --------------------------- | ------------------- |
+| Interface        | CLI                         | Terminal UI         |
+| Learning Curve   | Steeper                     | Gentler             |
+| Speed            | Command-based               | Visual navigation   |
+| Log Viewing      | Limited                     | Excellent           |
+| Resource Editing | YAML editor required        | Built-in editor     |
+| Multi-tasking    | Requires multiple terminals | Single interface    |
+| Scripting        | Excellent                   | Not designed for it |
 
 ## Support
 
 For issues with:
+
 - **k9s tool**: Visit [k9s GitHub](https://github.com/derailed/k9s/issues)
-- **Installation script**: Open issue on [AWS Utilities GitHub](https://github.com/awsutils/awsutils.github.io/issues)
+- **Installation script**: Open issue on [awsutils GitHub](https://github.com/awsutils/awsutils.github.io/issues)
 
 ## Related Scripts
 
