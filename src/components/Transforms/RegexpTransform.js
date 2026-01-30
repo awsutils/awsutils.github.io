@@ -3,6 +3,7 @@ export const RegexpTransform = {
   fn: async (v) => {
     const [expression, samples] = v.split("\n\n");
     const regexp = new RegExp(expression);
+    console.log(JSON.stringify(v));
 
     const parsedSamples = samples
       .split("\n")

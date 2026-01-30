@@ -1,16 +1,12 @@
 // src/components/TransformGridItem.tsx
 
 import { useEffect, useState } from "react";
-import { useLocalStorage } from "@uidotdev/usehooks";
 import clsx from "clsx";
 import style from "./styles.module.css";
 
 export const TransformGridItem = ({ transform, value, setValue }) => {
   const [options, setOptions] = useState(transform.options);
-  const [closedToggle, setClosedToggle] = useLocalStorage(
-    `transform_closed__${transform.name}`,
-    false,
-  );
+  const [closedToggle, setClosedToggle] = useState(false);
   const [result, setResult] = useState({
     error: false,
     value: "",

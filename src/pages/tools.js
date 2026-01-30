@@ -26,7 +26,7 @@ export default function Tools() {
           value={value}
           language="yaml"
           onMount={(v) => (ref.current = v)}
-          onChange={(v) => setValue(v ?? "")}
+          onChange={(v) => setValue(v.replaceAll("\r\n", "\n") ?? "")}
           options={{
             automaticLayout: true,
             lineNumbersMinChars: 3,
