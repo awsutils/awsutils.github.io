@@ -1,0 +1,16 @@
+{
+  "name": "AWS Utilities",
+  "short_name": "awsutils",
+  "description": "Collection of reusable utilities designed to make working with AWS easier, faster, and more consistent.",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#25c2a0",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

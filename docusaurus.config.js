@@ -10,7 +10,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'AWS Utilities',
+  title: 'AWS Utilities - Lightweight AWS Automation Tools',
   tagline: 'Collection of reusable utilities designed to make working with AWS easier, faster, and more consistent.',
   favicon: 'img/favicon.ico',
 
@@ -57,13 +57,66 @@ const config = {
         theme: {
           customCss: './src/css/custom.css',
         },
+        sitemap: {
+          changefreq: 'weekly',
+          priority: 0.5,
+          ignorePatterns: ['/tags/**'],
+          filename: 'sitemap.xml',
+        },
+        gtag: {
+          trackingID: 'G-XXXXXXXXXX', // Replace with your Google Analytics ID
+          anonymizeIP: true,
+        },
       }),
+    ],
+  ],
+
+  plugins: [
+    [
+      '@docusaurus/plugin-pwa',
+      {
+        debug: true,
+        offlineModeActivationStrategies: [
+          'appInstalled',
+          'standalone',
+          'queryString',
+        ],
+        pwaHead: [
+          {
+            tagName: 'link',
+            rel: 'icon',
+            href: '/img/logo.png',
+          },
+          {
+            tagName: 'link',
+            rel: 'manifest',
+            href: '/manifest.json',
+          },
+          {
+            tagName: 'meta',
+            name: 'theme-color',
+            content: 'rgb(37, 194, 160)',
+          },
+        ],
+      },
     ],
   ],
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      // SEO metadata
+      metadata: [
+        {name: 'keywords', content: 'AWS, utilities, automation, DevOps, cloud, scripts, EKS, Kubernetes, helm, kubectl'},
+        {name: 'description', content: 'Lightweight AWS utilities for automation and operational efficiency. Includes tools for EKS, Kubernetes, and cloud resource management.'},
+        {property: 'og:type', content: 'website'},
+        {property: 'og:title', content: 'AWS Utilities - Lightweight AWS Automation Tools'},
+        {property: 'og:description', content: 'Collection of reusable utilities designed to make working with AWS easier, faster, and more consistent.'},
+        {property: 'og:image', content: 'https://awsutils.github.io/img/logo.svg'},
+        {name: 'twitter:card', content: 'summary_large_image'},
+        {name: 'twitter:title', content: 'AWS Utilities - Lightweight AWS Automation Tools'},
+        {name: 'twitter:description', content: 'Collection of reusable utilities designed to make working with AWS easier, faster, and more consistent.'},
+      ],
       colorMode: {
         defaultMode: "dark",
         disableSwitch: true
@@ -80,6 +133,11 @@ const config = {
             sidebarId: 'docs',
             position: 'left',
             label: 'Docs',
+          },
+          {
+            to: '/tools',
+            label: 'Tools',
+            position: 'left',
           },
           {
             type: 'docSidebar',

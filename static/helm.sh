@@ -1,2 +1,0 @@
-#!/bin/bash
-curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | sh

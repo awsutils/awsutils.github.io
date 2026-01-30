@@ -4,29 +4,29 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Easy to Use',
+    title: 'Lightweight & Modular',
     description: (
       <>
-        awsutils was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Simple, reusable utilities that focus on specific AWS tasks without unnecessary complexity.
+        Each tool is designed to do one thing well.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Automation First',
     description: (
       <>
-        awsutills lets you focus on your infra, and we&apos;ll do the chores. Go
-        ahead and seek your script from the <code>scripts</code> directory.
+        Reduce repetitive AWS workflows and manual tasks. Perfect for DevOps teams
+        looking to streamline their cloud operations.
       </>
     ),
   },
   {
-    title: 'Powered by AWS SDK',
+    title: 'Production Ready',
     description: (
       <>
-        Extend or customize your script by reusing AWS SDK. Docusaurus can
-        be extended while reusing the same header and footer.
+        Battle-tested utilities suitable for learning, experimentation, and real-world
+        production environments with proper error handling.
       </>
     ),
   },
