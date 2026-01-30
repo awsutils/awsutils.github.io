@@ -10,7 +10,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'AWS Utilities - Lightweight AWS Automation Tools',
+  title: 'awsutils - Lightweight AWS Automation Tools',
   tagline: 'Collection of reusable utilities designed to make working with AWS easier, faster, and more consistent.',
   favicon: 'img/favicon.ico',
 
@@ -85,7 +85,22 @@ const config = {
           {
             tagName: 'link',
             rel: 'icon',
-            href: '/img/logo.png',
+            type: 'image/png',
+            sizes: '32x32',
+            href: '/img/favicon-32x32.png',
+          },
+          {
+            tagName: 'link',
+            rel: 'icon',
+            type: 'image/png',
+            sizes: '16x16',
+            href: '/img/favicon-16x16.png',
+          },
+          {
+            tagName: 'link',
+            rel: 'apple-touch-icon',
+            sizes: '180x180',
+            href: '/img/apple-touch-icon.png',
           },
           {
             tagName: 'link',
@@ -97,6 +112,21 @@ const config = {
             name: 'theme-color',
             content: '#ff9900',
           },
+          {
+            tagName: 'meta',
+            name: 'application-name',
+            content: 'awsutils',
+          },
+          {
+            tagName: 'meta',
+            name: 'apple-mobile-web-app-capable',
+            content: 'yes',
+          },
+          {
+            tagName: 'meta',
+            name: 'apple-mobile-web-app-status-bar-style',
+            content: 'black-translucent',
+          },
         ],
       },
     ],
@@ -107,24 +137,29 @@ const config = {
     ({
       // SEO metadata
       metadata: [
-        {name: 'keywords', content: 'AWS, utilities, automation, DevOps, cloud, scripts, EKS, Kubernetes, helm, kubectl'},
+        {name: 'keywords', content: 'awsutils, AWS utilities, automation, DevOps, cloud, scripts, EKS, Kubernetes, helm, kubectl'},
         {name: 'description', content: 'Lightweight AWS utilities for automation and operational efficiency. Includes tools for EKS, Kubernetes, and cloud resource management.'},
+        {name: 'author', content: 'awsutils'},
+        {name: 'application-name', content: 'awsutils'},
         {property: 'og:type', content: 'website'},
-        {property: 'og:title', content: 'AWS Utilities - Lightweight AWS Automation Tools'},
+        {property: 'og:site_name', content: 'awsutils'},
+        {property: 'og:title', content: 'awsutils - Lightweight AWS Automation Tools'},
         {property: 'og:description', content: 'Collection of reusable utilities designed to make working with AWS easier, faster, and more consistent.'},
         {property: 'og:image', content: 'https://awsutils.github.io/img/logo.svg'},
+        {property: 'og:url', content: 'https://awsutils.github.io'},
         {name: 'twitter:card', content: 'summary_large_image'},
-        {name: 'twitter:title', content: 'AWS Utilities - Lightweight AWS Automation Tools'},
+        {name: 'twitter:title', content: 'awsutils - Lightweight AWS Automation Tools'},
         {name: 'twitter:description', content: 'Collection of reusable utilities designed to make working with AWS easier, faster, and more consistent.'},
+        {name: 'twitter:site', content: '@awscloud'},
       ],
       colorMode: {
         defaultMode: "dark",
         disableSwitch: true
       },
       navbar: {
-        title: 'AWS Utilities',
+        title: 'awsutils',
         logo: {
-          alt: 'AWS Utilities Logo',
+          alt: 'awsutils Logo',
           src: 'img/logo.svg',
         },
         items: [

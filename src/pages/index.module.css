@@ -21,3 +21,19 @@
   align-items: center;
   justify-content: center;
 }
+
+.seoCopy {
+  padding: 3rem 0 4rem;
+  background: linear-gradient(180deg, rgba(15, 22, 33, 0.7) 0%, rgba(19, 31, 45, 0.9) 100%);
+}
+
+.seoCopy h2 {
+  margin-bottom: 0.75rem;
+}
+
+.seoCopy p {
+  color: #dbe7f3;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  margin-bottom: 1.2rem;
+}

@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
 Sitemap: https://awsutils.github.io/sitemap.xml

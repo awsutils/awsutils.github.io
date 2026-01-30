@@ -12,12 +12,25 @@ export default function Tools() {
 
   return (
     <Layout
-      title="Tools"
-      description="PTools-inspired utilities: JSON, encoding, dates, gzip, Python/JSON, regex and more."
+      title="awsutils – Online Tools"
+      description="Browser-based AWS-friendly helpers: JSON/YAML, encoding, date math, gzip, Python↔JSON, regex, and more."
     >
       <Head>
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://awsutils.github.io/tools" />
+        <meta
+          name="keywords"
+          content="awsutils, AWS tools, JSON formatter, YAML, base64, gzip, regex tester, cloud automation"
+        />
+        <meta property="og:title" content="awsutils – Browser Tools for Cloud Engineers" />
+        <meta
+          property="og:description"
+          content="Run quick JSON/YAML conversions, encodings, regex checks, and other everyday AWS tasks directly in your browser."
+        />
+        <meta
+          name="description"
+          content="awsutils tools: fast browser utilities for JSON ↔ YAML conversion, base64 encode/decode, gzip, timestamps, regex testing, and AWS automation prep."
+        />
       </Head>
 
       <main className={style.container}>
