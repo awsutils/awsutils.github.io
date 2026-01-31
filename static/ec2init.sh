@@ -60,6 +60,11 @@ wget https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_${archsm
 tar -xzf ~/.tmp/k9s.tar.gz -C ~/.tmp
 install -o root -g root -m 0755 ~/.tmp/k9s /usr/local/bin/k9s
 
+# Install gum - Beautiful interactive shell scripts
+wget https://github.com/charmbracelet/gum/releases/download/v0.14.3/gum_0.14.3_Linux_${archlg}.tar.gz -O ~/.tmp/gum.tar.gz
+tar -xzf ~/.tmp/gum.tar.gz -C ~/.tmp
+install -o root -g root -m 0755 ~/.tmp/gum /usr/local/bin/gum
+
 # Add default users to docker group for non-root Docker access
 usermod -aG docker ec2-user
 usermod -aG docker ssm-user
