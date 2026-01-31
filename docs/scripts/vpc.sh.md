@@ -476,7 +476,7 @@ Architecture:
   --azs 2
 
 # Create VPC endpoints for S3 access
-./add-vpc-endpoint.sh \
+./vpce.sh \
   --vpc-id $(cat vpc-data-vpc-info.txt | grep VPC_ID | cut -d'=' -f2) \
   --service s3 \
   --route-tables $(cat vpc-data-vpc-info.txt | grep PUBLIC_RT_ID | cut -d'=' -f2)
@@ -835,7 +835,7 @@ For issues with:
 
 ## Related Scripts
 
-- [add-vpc-endpoint.sh](./add-vpc-endpoint.sh.md) - Add VPC endpoints to your VPC
+- [vpce.sh](./vpce.sh.md) - Add VPC endpoints to your VPC
 - [ec2init.sh](./ec2init.sh.md) - Initialize EC2 instances in your VPC
 - [csinit.sh](./csinit.sh.md) - CloudShell initialization
 
