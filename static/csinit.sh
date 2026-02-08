@@ -49,6 +49,8 @@ wget https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_${archsm
 tar -xzf ~/.tmp/k9s.tar.gz -C ~/.tmp
 install -o root -g root -m 0755 ~/.tmp/k9s /usr/local/bin/k9s
 
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
 # Enable multi-architecture Docker image support (e.g., ARM64 images on x86_64)
 mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
 docker run --privileged --rm tonistiigi/binfmt --install all
