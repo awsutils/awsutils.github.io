@@ -49,7 +49,7 @@ VPC_LIST=$(aws ec2 describe-vpcs \
 SELECTED=$(echo "$VPC_LIST" | gum choose --header "Select a VPC:")
 VPC_ID=$(echo "$SELECTED" | awk '{print $1}')
 
-REGION=$(aws configure get region)
+REGION=$(aws ec2 describe-availability-zones --output text --query 'AvailabilityZones[0].[RegionName]')
 VPC_NAME=$(aws ec2 describe-vpcs --vpc-ids "$VPC_ID" \
   --query 'Vpcs[0].Tags[?Key==`Name`].Value | [0]' --output text)
 [[ "$VPC_NAME" == "None" || -z "$VPC_NAME" ]] && VPC_NAME="$VPC_ID"
