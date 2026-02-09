@@ -1,291 +1,356 @@
 #!/bin/bash
 
-# VPC Endpoints Creation Script
-# Creates gateway and interface endpoints with proper configurations
-
 set -e
 
-# Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# Function to print colored messages
-print_message() {
-    local color=$1
-    local message=$2
-    echo -e "${color}${message}${NC}"
-}
+log()   { echo -e "${GREEN}[INFO]${NC} $1"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-# Function to check if AWS CLI is installed
-check_aws_cli() {
-    if ! command -v aws &> /dev/null; then
-        print_message "$RED" "Error: AWS CLI is not installed"
-        exit 1
-    fi
-}
+# --- Check/Install gum ---
+if ! command -v gum > /dev/null 2>&1; then
+  log "Installing gum..."
+  GUM_VERSION="0.17.0"
+  ARCH=$(uname -m)
+  case "$ARCH" in
+    x86_64)  ARCH="x86_64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    *) error "Unsupported architecture: $ARCH" ;;
+  esac
+  OS=$(uname -s)
+  case "$OS" in
+    Linux)  OS="Linux" ;;
+    Darwin) OS="Darwin" ;;
+    *) error "Unsupported OS: $OS" ;;
+  esac
+  GUM_URL="https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}/gum_${GUM_VERSION}_${OS}_${ARCH}.tar.gz"
+  TMP_DIR=$(mktemp -d)
+  curl -fsSL "$GUM_URL" -o "${TMP_DIR}/gum.tar.gz" || error "Failed to download gum"
+  tar -xzf "${TMP_DIR}/gum.tar.gz" -C "${TMP_DIR}"
+  sudo cp "${TMP_DIR}/gum_${GUM_VERSION}_${OS}_${ARCH}/gum" /usr/local/bin/gum
+  sudo chmod +x /usr/local/bin/gum
+  rm -rf "${TMP_DIR}"
+  command -v gum > /dev/null 2>&1 || error "gum installation failed"
+  log "gum installed successfully"
+fi
 
-# Function to validate VPC ID
-validate_vpc() {
-    local vpc_id=$1
-    if ! aws ec2 describe-vpcs --vpc-ids "$vpc_id" &> /dev/null; then
-        print_message "$RED" "Error: VPC $vpc_id not found or invalid"
-        exit 1
-    fi
-    print_message "$GREEN" "VPC $vpc_id validated successfully"
-}
+# --- Select VPC ---
+VPC_LIST=$(aws ec2 describe-vpcs \
+  --query 'Vpcs[*].[VpcId, Tags[?Key==`Name`].Value | [0] || `(no name)`, CidrBlock]' \
+  --output text | awk '{printf "%s\t%s\t%s\n", $1, $2, $3}')
 
-# Function to get all route tables in VPC
-get_route_tables() {
-    local vpc_id=$1
-    aws ec2 describe-route-tables \
-        --filters "Name=vpc-id,Values=$vpc_id" \
-        --query 'RouteTables[*].RouteTableId' \
-        --output text
-}
+[[ -z "$VPC_LIST" ]] && error "No VPCs found"
 
-# Function to check if route table is private (no IGW attachment)
-is_private_route_table() {
-    local route_table_id=$1
-    local igw_count=$(aws ec2 describe-route-tables \
-        --route-table-ids "$route_table_id" \
-        --query 'RouteTables[0].Routes[?GatewayId!=`local` && starts_with(GatewayId, `igw-`)].GatewayId' \
-        --output text | wc -w)
-    
-    if [ "$igw_count" -eq 0 ]; then
-        return 0  # Private route table
-    else
-        return 1  # Public route table
-    fi
-}
+SELECTED=$(echo "$VPC_LIST" | gum choose --header "Select a VPC:")
+VPC_ID=$(echo "$SELECTED" | awk '{print $1}')
 
-# Function to get private subnets
-get_private_subnets() {
-    local vpc_id=$1
-    local private_subnets=()
-    
-    # Get all subnets in VPC
-    local all_subnets=$(aws ec2 describe-subnets \
-        --filters "Name=vpc-id,Values=$vpc_id" \
-        --query 'Subnets[*].SubnetId' \
-        --output text)
-    
-    # Check each subnet's route table
-    for subnet_id in $all_subnets; do
-        # Get the route table associated with this subnet
-        local route_table_id=$(aws ec2 describe-route-tables \
-            --filters "Name=association.subnet-id,Values=$subnet_id" \
-            --query 'RouteTables[0].RouteTableId' \
-            --output text)
-        
-        # If no explicit association, use main route table
-        if [ "$route_table_id" == "None" ] || [ -z "$route_table_id" ]; then
-            route_table_id=$(aws ec2 describe-route-tables \
-                --filters "Name=vpc-id,Values=$vpc_id" "Name=association.main,Values=true" \
-                --query 'RouteTables[0].RouteTableId' \
-                --output text)
-        fi
-        
-        # Check if route table is private
-        if is_private_route_table "$route_table_id"; then
-            private_subnets+=("$subnet_id")
-        fi
+REGION=$(aws configure get region)
+VPC_NAME=$(aws ec2 describe-vpcs --vpc-ids "$VPC_ID" \
+  --query 'Vpcs[0].Tags[?Key==`Name`].Value | [0]' --output text)
+[[ "$VPC_NAME" == "None" || -z "$VPC_NAME" ]] && VPC_NAME="$VPC_ID"
+log "Region: $REGION"
+log "VPC: $VPC_ID ($VPC_NAME)"
+
+# --- Common endpoint services ---
+GATEWAY_SERVICES=(
+  "com.amazonaws.${REGION}.s3"
+  "com.amazonaws.${REGION}.dynamodb"
+)
+
+INTERFACE_SERVICES=(
+  "com.amazonaws.${REGION}.ec2"
+  "com.amazonaws.${REGION}.ec2messages"
+  "com.amazonaws.${REGION}.ssm"
+  "com.amazonaws.${REGION}.ssmmessages"
+  "com.amazonaws.${REGION}.logs"
+  "com.amazonaws.${REGION}.monitoring"
+  "com.amazonaws.${REGION}.sts"
+  "com.amazonaws.${REGION}.kms"
+  "com.amazonaws.${REGION}.ecr.api"
+  "com.amazonaws.${REGION}.ecr.dkr"
+  "com.amazonaws.${REGION}.secretsmanager"
+  "com.amazonaws.${REGION}.sqs"
+  "com.amazonaws.${REGION}.sns"
+  "com.amazonaws.${REGION}.execute-api"
+)
+
+# --- Select Gateway Endpoints ---
+GW_LABELS=()
+for svc in "${GATEWAY_SERVICES[@]}"; do
+  GW_LABELS+=("${svc##*.}")
+done
+
+echo ""
+SELECTED_GW=$(printf '%s\n' "${GW_LABELS[@]}" | gum choose --no-limit --selected="$(IFS=,; echo "${GW_LABELS[*]}")" --header "Select Gateway Endpoints (tab to toggle):")
+SELECTED_GW_SERVICES=()
+while IFS= read -r label; do
+  [[ -z "$label" ]] && continue
+  for svc in "${GATEWAY_SERVICES[@]}"; do
+    [[ "${svc##*.}" == "$label" ]] && SELECTED_GW_SERVICES+=("$svc") && break
+  done
+done <<< "$SELECTED_GW"
+log "Selected ${#SELECTED_GW_SERVICES[@]} gateway endpoint(s)"
+
+# --- Select Interface Endpoints ---
+IF_LABELS=()
+for svc in "${INTERFACE_SERVICES[@]}"; do
+  IF_LABELS+=("${svc##*.}")
+done
+
+SELECTED_IF=$(printf '%s\n' "${IF_LABELS[@]}" | gum choose --no-limit --selected="$(IFS=,; echo "${IF_LABELS[*]}")" --header "Select Interface Endpoints (tab to toggle):")
+SELECTED_IF_SERVICES=()
+while IFS= read -r label; do
+  [[ -z "$label" ]] && continue
+  for svc in "${INTERFACE_SERVICES[@]}"; do
+    [[ "${svc##*.}" == "$label" ]] && SELECTED_IF_SERVICES+=("$svc") && break
+  done
+done <<< "$SELECTED_IF"
+log "Selected ${#SELECTED_IF_SERVICES[@]} interface endpoint(s)"
+
+# --- Add additional endpoints by typing ---
+if gum confirm "Add additional interface endpoints manually?"; then
+  log "Fetching all available interface services..."
+  ALL_IF_SERVICES=$(aws ec2 describe-vpc-endpoint-services \
+    --query 'ServiceDetails[?ServiceType[?ServiceType==`Interface`]].ServiceName' \
+    --output text | tr '\t' '\n' | sort)
+
+  while true; do
+    EXTRA=$(echo "$ALL_IF_SERVICES" | gum filter --placeholder "Type to search service name (ESC to finish)..." --header "Add Interface Endpoint:") || break
+    [[ -z "$EXTRA" ]] && break
+    # Avoid duplicates
+    already=false
+    for svc in "${SELECTED_IF_SERVICES[@]}"; do
+      [[ "$svc" == "$EXTRA" ]] && already=true && break
     done
-    
-    echo "${private_subnets[@]}"
-}
-
-# Function to get VPC CIDR block
-get_vpc_cidr() {
-    local vpc_id=$1
-    aws ec2 describe-vpcs \
-        --vpc-ids "$vpc_id" \
-        --query 'Vpcs[0].CidrBlock' \
-        --output text
-}
-
-# Function to create or get security group for interface endpoints
-create_endpoint_security_group() {
-    local vpc_id=$1
-    local vpc_cidr=$2
-    local sg_name="vpc-endpoint-sg"
-    
-    # Check if security group already exists
-    local existing_sg=$(aws ec2 describe-security-groups \
-        --filters "Name=vpc-id,Values=$vpc_id" "Name=group-name,Values=$sg_name" \
-        --query 'SecurityGroups[0].GroupId' \
-        --output text 2>/dev/null || echo "")
-    
-    if [ -n "$existing_sg" ] && [ "$existing_sg" != "None" ]; then
-        print_message "$YELLOW" "Using existing security group: $existing_sg"
-        echo "$existing_sg"
-        return
-    fi
-    
-    # Create new security group
-    local sg_id=$(aws ec2 create-security-group \
-        --group-name "$sg_name" \
-        --description "Security group for VPC endpoints - allows all traffic from VPC CIDR" \
-        --vpc-id "$vpc_id" \
-        --query 'GroupId' \
-        --output text)
-    
-    print_message "$GREEN" "Created security group: $sg_id"
-    
-    # Add ingress rule for all traffic from VPC CIDR
-    aws ec2 authorize-security-group-ingress \
-        --group-id "$sg_id" \
-        --protocol all \
-        --cidr "$vpc_cidr" \
-        --output text &> /dev/null
-    
-    print_message "$GREEN" "Added ingress rule: Allow all from $vpc_cidr"
-    
-    echo "$sg_id"
-}
-
-# Function to create gateway endpoint
-create_gateway_endpoint() {
-    local vpc_id=$1
-    local service_name=$2
-    local route_tables=$3
-    
-    print_message "$YELLOW" "Creating gateway endpoint for $service_name..."
-    
-    local endpoint_id=$(aws ec2 create-vpc-endpoint \
-        --vpc-id "$vpc_id" \
-        --service-name "$service_name" \
-        --route-table-ids $route_tables \
-        --query 'VpcEndpoint.VpcEndpointId' \
-        --output text 2>&1)
-    
-    if [[ $endpoint_id == vpce-* ]]; then
-        print_message "$GREEN" "✓ Created gateway endpoint: $endpoint_id for $service_name"
+    if $already; then
+      warn "${EXTRA##*.}: already selected"
     else
-        print_message "$RED" "✗ Failed to create gateway endpoint for $service_name: $endpoint_id"
+      SELECTED_IF_SERVICES+=("$EXTRA")
+      log "Added: ${EXTRA##*.}"
     fi
-}
+    gum confirm "Add another?" || break
+  done
+  log "Total interface endpoint(s): ${#SELECTED_IF_SERVICES[@]}"
+fi
 
-# Function to create interface endpoint
-create_interface_endpoint() {
-    local vpc_id=$1
-    local service_name=$2
-    local subnet_ids=$3
-    local security_group_id=$4
-    
-    print_message "$YELLOW" "Creating interface endpoint for $service_name..."
-    
-    local endpoint_id=$(aws ec2 create-vpc-endpoint \
-        --vpc-id "$vpc_id" \
+# --- VPC CIDR ---
+VPC_CIDR=$(aws ec2 describe-vpcs --vpc-ids "$VPC_ID" \
+  --query 'Vpcs[0].CidrBlock' --output text)
+log "VPC CIDR: $VPC_CIDR"
+
+# --- Route tables ---
+ALL_RT_IDS=$(aws ec2 describe-route-tables \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query 'RouteTables[*].RouteTableId' --output text)
+log "All route tables: $ALL_RT_IDS"
+
+# Public RTs = have igw- route
+PUBLIC_RT_IDS=$(aws ec2 describe-route-tables \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query 'RouteTables[?Routes[?GatewayId!=`null` && starts_with(GatewayId, `igw-`)]].RouteTableId' \
+  --output text)
+
+# Private RTs = all minus public
+PRIVATE_RT_IDS=""
+for rt in $ALL_RT_IDS; do
+  is_public=false
+  for pub_rt in $PUBLIC_RT_IDS; do
+    [[ "$rt" == "$pub_rt" ]] && is_public=true && break
+  done
+  $is_public || PRIVATE_RT_IDS="$PRIVATE_RT_IDS $rt"
+done
+PRIVATE_RT_IDS=$(echo "$PRIVATE_RT_IDS" | xargs)
+log "Private route tables: ${PRIVATE_RT_IDS:-none}"
+
+# --- Private subnets ---
+MAIN_RT=$(aws ec2 describe-route-tables \
+  --filters "Name=vpc-id,Values=$VPC_ID" "Name=association.main,Values=true" \
+  --query 'RouteTables[0].RouteTableId' --output text)
+
+MAIN_IS_PRIVATE=false
+for rt in $PRIVATE_RT_IDS; do
+  [[ "$rt" == "$MAIN_RT" ]] && MAIN_IS_PRIVATE=true && break
+done
+
+EXPLICIT_SUBNETS=$(aws ec2 describe-route-tables \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query 'RouteTables[*].Associations[?SubnetId].SubnetId' --output text)
+
+PRIVATE_SUBNET_IDS=""
+# Subnets explicitly associated with private RTs
+for rt in $PRIVATE_RT_IDS; do
+  subs=$(aws ec2 describe-route-tables --route-table-ids "$rt" \
+    --query 'RouteTables[0].Associations[?SubnetId].SubnetId' --output text)
+  PRIVATE_SUBNET_IDS="$PRIVATE_SUBNET_IDS $subs"
+done
+
+# Subnets with no explicit RT use main; if main is private, they're private
+if $MAIN_IS_PRIVATE; then
+  ALL_SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" \
+    --query 'Subnets[*].SubnetId' --output text)
+  for s in $ALL_SUBNETS; do
+    echo "$EXPLICIT_SUBNETS" | grep -qw "$s" || PRIVATE_SUBNET_IDS="$PRIVATE_SUBNET_IDS $s"
+  done
+fi
+
+PRIVATE_SUBNET_IDS=$(echo "$PRIVATE_SUBNET_IDS" | xargs -n1 | sort -u | xargs)
+log "Private subnets: ${PRIVATE_SUBNET_IDS:-none}"
+
+[[ -z "$PRIVATE_SUBNET_IDS" ]] && warn "No private subnets found. Interface endpoints will be skipped."
+
+# --- Security Group ---
+SG_TAG_NAME="${VPC_NAME}-vpce-sg"
+SG_ID=$(aws ec2 describe-security-groups \
+  --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=${SG_TAG_NAME}" \
+  --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null)
+
+if [[ -n "$SG_ID" && "$SG_ID" != "None" ]]; then
+  log "Using existing Security Group: $SG_ID ($SG_TAG_NAME)"
+else
+  SG_ID=$(aws ec2 create-security-group \
+    --group-name "$SG_TAG_NAME" \
+    --description "VPC Endpoints - allow all from $VPC_CIDR" \
+    --vpc-id "$VPC_ID" \
+    --tag-specifications "ResourceType=security-group,Tags=[{Key=Name,Value=${SG_TAG_NAME}}]" \
+    --query 'GroupId' --output text)
+
+  aws ec2 authorize-security-group-ingress \
+    --group-id "$SG_ID" --protocol -1 --cidr "$VPC_CIDR" > /dev/null
+
+  log "Created Security Group: $SG_ID ($SG_TAG_NAME)"
+fi
+
+# --- Existing endpoints ---
+EXISTING=$(aws ec2 describe-vpc-endpoints \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query 'VpcEndpoints[?State!=`deleted`].ServiceName' --output text)
+
+# --- Verify service availability ---
+AVAILABLE_SERVICES=$(aws ec2 describe-vpc-endpoint-services \
+  --query 'ServiceNames' --output text)
+
+# --- Pre-cache subnet AZs ---
+declare -A SUBNET_AZ_MAP
+for subnet in $PRIVATE_SUBNET_IDS; do
+  az=$(aws ec2 describe-subnets --subnet-ids "$subnet" \
+    --query 'Subnets[0].AvailabilityZone' --output text)
+  SUBNET_AZ_MAP[$subnet]="$az"
+done
+
+# --- Create endpoints in parallel ---
+LOG_DIR=$(mktemp -d)
+PIDS=()
+
+# Gateway endpoints
+echo ""
+log "=== Creating Gateway Endpoints (all route tables) ==="
+for svc in "${SELECTED_GW_SERVICES[@]}"; do
+  short="${svc##*.}"
+  if echo "$EXISTING" | grep -qw "$svc"; then
+    warn "$short: already exists, skipping"
+    continue
+  fi
+  if ! echo "$AVAILABLE_SERVICES" | grep -qw "$svc"; then
+    warn "$short: not available in $REGION, skipping"
+    continue
+  fi
+  (
+    TAG_NAME="${VPC_NAME}-vpce-${short}"
+    EPID=$(aws ec2 create-vpc-endpoint \
+      --vpc-id "$VPC_ID" \
+      --service-name "$svc" \
+      --vpc-endpoint-type Gateway \
+      --route-table-ids $ALL_RT_IDS \
+      --tag-specifications "ResourceType=vpc-endpoint,Tags=[{Key=Name,Value=${TAG_NAME}}]" \
+      --query 'VpcEndpoint.VpcEndpointId' --output text 2>&1) && \
+      echo "OK|$short|$EPID|$TAG_NAME" > "${LOG_DIR}/gw_${short}" || \
+      echo "FAIL|$short|$EPID" > "${LOG_DIR}/gw_${short}"
+  ) &
+  PIDS+=($!)
+done
+
+# Interface endpoints
+echo ""
+log "=== Creating Interface Endpoints (private subnets) ==="
+if [[ -z "$PRIVATE_SUBNET_IDS" ]]; then
+  warn "Skipping all interface endpoints — no private subnets"
+else
+  for svc in "${SELECTED_IF_SERVICES[@]}"; do
+    short="${svc##*.}"
+    if echo "$EXISTING" | grep -qw "$svc"; then
+      warn "$short: already exists, skipping"
+      continue
+    fi
+    if ! echo "$AVAILABLE_SERVICES" | grep -qw "$svc"; then
+      warn "$short: not available in $REGION, skipping"
+      continue
+    fi
+
+    # Filter subnets by AZ availability
+    SVC_AZS=$(aws ec2 describe-vpc-endpoint-services \
+      --service-names "$svc" \
+      --query 'ServiceDetails[0].AvailabilityZones[]' --output text 2>/dev/null)
+
+    VALID_SUBNETS=""
+    for subnet in $PRIVATE_SUBNET_IDS; do
+      echo "$SVC_AZS" | grep -qw "${SUBNET_AZ_MAP[$subnet]}" && VALID_SUBNETS="$VALID_SUBNETS $subnet"
+    done
+    VALID_SUBNETS=$(echo "$VALID_SUBNETS" | xargs)
+
+    if [[ -z "$VALID_SUBNETS" ]]; then
+      warn "$short: no subnets in supported AZs, skipping"
+      continue
+    fi
+
+    (
+      TAG_NAME="${VPC_NAME}-vpce-${short}"
+      EPID=$(aws ec2 create-vpc-endpoint \
+        --vpc-id "$VPC_ID" \
+        --service-name "$svc" \
         --vpc-endpoint-type Interface \
-        --service-name "$service_name" \
-        --subnet-ids $subnet_ids \
-        --security-group-ids "$security_group_id" \
+        --subnet-ids $VALID_SUBNETS \
+        --security-group-ids "$SG_ID" \
         --private-dns-enabled \
-        --query 'VpcEndpoint.VpcEndpointId' \
-        --output text 2>&1)
-    
-    if [[ $endpoint_id == vpce-* ]]; then
-        print_message "$GREEN" "✓ Created interface endpoint: $endpoint_id for $service_name"
-    else
-        print_message "$YELLOW" "✗ Failed to create interface endpoint for $service_name: $endpoint_id"
-    fi
-}
+        --tag-specifications "ResourceType=vpc-endpoint,Tags=[{Key=Name,Value=${TAG_NAME}}]" \
+        --query 'VpcEndpoint.VpcEndpointId' --output text 2>&1) && \
+        echo "OK|$short|$EPID|$TAG_NAME" > "${LOG_DIR}/if_${short}" || \
+        echo "FAIL|$short|$EPID" > "${LOG_DIR}/if_${short}"
+    ) &
+    PIDS+=($!)
+  done
+fi
 
-# Main function
-main() {
-    print_message "$GREEN" "=== VPC Endpoints Creation Script ==="
-    echo
-    
-    # Check AWS CLI
-    check_aws_cli
-    
-    # Get VPC ID from user
-    if [ -z "$1" ]; then
-        read -p "Enter VPC ID: " VPC_ID
-    else
-        VPC_ID=$1
-    fi
-    
-    # Validate VPC
-    validate_vpc "$VPC_ID"
-    
-    # Get AWS region
-    AWS_REGION=$(aws configure get region)
-    if [ -z "$AWS_REGION" ]; then
-        AWS_REGION="us-east-1"
-        print_message "$YELLOW" "No region configured, using default: $AWS_REGION"
-    fi
-    
-    print_message "$GREEN" "Using region: $AWS_REGION"
-    echo
-    
-    # Get VPC CIDR
-    VPC_CIDR=$(get_vpc_cidr "$VPC_ID")
-    print_message "$GREEN" "VPC CIDR: $VPC_CIDR"
-    
-    # Get all route tables
-    print_message "$YELLOW" "Fetching route tables..."
-    ROUTE_TABLES=$(get_route_tables "$VPC_ID")
-    ROUTE_TABLE_COUNT=$(echo $ROUTE_TABLES | wc -w)
-    print_message "$GREEN" "Found $ROUTE_TABLE_COUNT route table(s)"
-    
-    # Get private subnets
-    print_message "$YELLOW" "Identifying private subnets..."
-    PRIVATE_SUBNETS=$(get_private_subnets "$VPC_ID")
-    PRIVATE_SUBNET_COUNT=$(echo $PRIVATE_SUBNETS | wc -w)
-    
-    if [ $PRIVATE_SUBNET_COUNT -eq 0 ]; then
-        print_message "$RED" "No private subnets found. Interface endpoints require private subnets."
-        print_message "$YELLOW" "Only gateway endpoints will be created."
-    else
-        print_message "$GREEN" "Found $PRIVATE_SUBNET_COUNT private subnet(s)"
-        
-        # Create security group for interface endpoints
-        print_message "$YELLOW" "Creating/Getting security group for interface endpoints..."
-        SECURITY_GROUP_ID=$(create_endpoint_security_group "$VPC_ID" "$VPC_CIDR")
-    fi
-    
-    echo
-    print_message "$GREEN" "=== Creating Gateway Endpoints ==="
-    
-    # Create S3 gateway endpoint
-    create_gateway_endpoint "$VPC_ID" "com.amazonaws.$AWS_REGION.s3" "$ROUTE_TABLES"
-    
-    # Create DynamoDB gateway endpoint
-    create_gateway_endpoint "$VPC_ID" "com.amazonaws.$AWS_REGION.dynamodb" "$ROUTE_TABLES"
-    
-    # Create interface endpoints only if private subnets exist
-    if [ $PRIVATE_SUBNET_COUNT -gt 0 ]; then
-        echo
-        print_message "$GREEN" "=== Creating Interface Endpoints ==="
-        
-        # Common interface endpoints
-        INTERFACE_SERVICES=(
-            "ec2"
-            "ec2messages"
-            "ssm"
-            "ssmmessages"
-            "logs"
-            "sts"
-            "secretsmanager"
-            "kms"
-            "ecr.api"
-            "ecr.dkr"
-        )
-        
-        for service in "${INTERFACE_SERVICES[@]}"; do
-            create_interface_endpoint "$VPC_ID" \
-                "com.amazonaws.$AWS_REGION.$service" \
-                "$PRIVATE_SUBNETS" \
-                "$SECURITY_GROUP_ID"
-        done
-    fi
-    
-    echo
-    print_message "$GREEN" "=== VPC Endpoints Creation Complete ==="
-}
+# Wait for all background jobs
+log "Waiting for ${#PIDS[@]} endpoint(s) to be created..."
+for pid in "${PIDS[@]}"; do
+  wait "$pid" 2>/dev/null
+done
 
-# Run main function
-main "$@"
+# Print results
+echo ""
+log "=== Results ==="
+for f in "${LOG_DIR}"/*; do
+  [[ -f "$f" ]] || continue
+  IFS='|' read -r status short detail extra < "$f"
+  if [[ "$status" == "OK" ]]; then
+    log "$short: $detail ($extra)"
+  else
+    warn "$short: FAILED - $detail"
+  fi
+done
+rm -rf "${LOG_DIR}"
+
+# --- Summary ---
+echo ""
+echo -e "${CYAN}========== SUMMARY ==========${NC}"
+aws ec2 describe-vpc-endpoints \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query 'VpcEndpoints[?State!=`deleted`].{ID:VpcEndpointId,Service:ServiceName,Type:VpcEndpointType,State:State}' \
+  --output table
+
+log "Done!"
