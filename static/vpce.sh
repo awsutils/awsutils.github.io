@@ -1,5 +1,5 @@
 #!/bin/bash
-
+{
 set -e
 
 RED='\033[0;31m'
@@ -11,6 +11,9 @@ NC='\033[0m'
 log()   { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+# Redirect stdin from terminal (needed when piped: curl ... | bash)
+exec < /dev/tty
 
 # --- Check/Install gum ---
 if ! command -v gum > /dev/null 2>&1; then
@@ -127,7 +130,7 @@ if gum confirm "Add additional interface endpoints manually?"; then
     for svc in "${SELECTED_IF_SERVICES[@]}"; do
       [[ "$svc" == "$EXTRA" ]] && already=true && break
     done
-    if $already; then
+    if [[ "$already" == "true" ]]; then
       warn "${EXTRA##*.}: already selected"
     else
       SELECTED_IF_SERVICES+=("$EXTRA")
@@ -162,7 +165,7 @@ for rt in $ALL_RT_IDS; do
   for pub_rt in $PUBLIC_RT_IDS; do
     [[ "$rt" == "$pub_rt" ]] && is_public=true && break
   done
-  $is_public || PRIVATE_RT_IDS="$PRIVATE_RT_IDS $rt"
+  if [[ "$is_public" != "true" ]]; then PRIVATE_RT_IDS="$PRIVATE_RT_IDS $rt"; fi
 done
 PRIVATE_RT_IDS=$(echo "$PRIVATE_RT_IDS" | xargs)
 log "Private route tables: ${PRIVATE_RT_IDS:-none}"
@@ -190,7 +193,7 @@ for rt in $PRIVATE_RT_IDS; do
 done
 
 # Subnets with no explicit RT use main; if main is private, they're private
-if $MAIN_IS_PRIVATE; then
+if [[ "$MAIN_IS_PRIVATE" == "true" ]]; then
   ALL_SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" \
     --query 'Subnets[*].SubnetId' --output text)
   for s in $ALL_SUBNETS; do
@@ -354,3 +357,4 @@ aws ec2 describe-vpc-endpoints \
   --output table
 
 log "Done!"
+}
