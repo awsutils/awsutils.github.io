@@ -16,6 +16,7 @@ The scripts in this repo are published directly from `static/`, so each file is 
 | [helm.sh](./helm.sh.md) | Runs Helm's official install script wrapper | Helm installation via upstream script |
 | [accinit.sh](./accinit.sh.md) | Applies a non-interactive single-account AWS security baseline | Account-level baseline bootstrap |
 | [csinit.sh](./csinit.sh.md) | Prepares AWS CloudShell for Terraform and Kubernetes work | CloudShell bootstrap |
+| [dashboard.sh](./dashboard.sh.md) | Creates or updates the repo's CloudWatch dashboard from the published docs JSON | CloudWatch dashboard bootstrap |
 | [ec2init.sh](./ec2init.sh.md) | Prepares Amazon Linux 2023 EC2 instances for AWS, Terraform, Docker, and Kubernetes work | EC2 workstation bootstrap |
 | [vpce.sh](./vpce.sh.md) | Interactive VPC endpoint creation helper | Building private-network access to AWS services |
 
