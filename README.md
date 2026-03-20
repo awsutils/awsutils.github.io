@@ -1,44 +1,39 @@
 # awsutils
 
-**awsutils** is a collection of simple, reusable utilities designed to make working with AWS easier, faster, and more consistent. The goal of this project is to provide practical tools that help automate common tasks, reduce repetitive work, and improve day-to-day cloud operations.
+`awsutils` is a Docusaurus site that publishes lightweight AWS helper scripts, documentation, and a small browser-based transform toolbox.
 
-## Features
-- Lightweight and easy-to-use AWS helper utilities  
-- Focused on automation and operational efficiency  
-- Designed to be modular and extensible  
-- Suitable for learning, experimentation, and real-world use  
+## What Is In This Repo
 
-## Use Cases
-- Managing and automating AWS resources  
-- Simplifying repetitive AWS CLI or SDK workflows  
-- Supporting DevOps and cloud engineering tasks  
+- `docs/` for documentation content
+- `static/` for published shell scripts and static assets
+- `src/` for the Docusaurus site and custom React pages
 
-## Getting Started
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/awsutils/awsutils.github.io.git
-    ```
+Scripts placed in `static/` are served directly from `https://awsutils.github.io/<script>.sh`.
 
-2. Review the available utilities and documentation.
-3. Configure your AWS credentials before running any tools.
+## Local Development
 
-## Requirements
+```bash
+npm install
+npm start
+```
 
-* An active AWS account
-* Properly configured AWS credentials
-* Basic knowledge of AWS services
+Other useful commands:
+
+```bash
+npm run build
+npm run serve
+```
 
 ## Contributing
 
-Contributions are welcome. You can:
+Contributions are welcome, especially for:
 
-* Add new utilities
-* Improve existing scripts
-* Fix bugs or enhance documentation
+- new scripts in `static/`
+- matching documentation in `docs/scripts/`
+- improvements to the docs site or `/tools` page
 
-Please ensure your changes are clear, tested, and well-documented.
+When adding or changing a script, keep its documentation in sync.
 
 ## License
 
-This library is licensed under the MIT-0 License. See the LICENSE file.
-
+This project is licensed under the MIT-0 License. See `LICENSE`.
