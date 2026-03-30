@@ -4,65 +4,41 @@ set -euo pipefail
 export AWS_PAGER=""
 export AWS_CLI_AUTO_PROMPT=off
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-info() {
-    printf '%b[INFO]%b %s\n' "$GREEN" "$NC" "$*"
-}
-
-warn() {
-    printf '%b[WARN]%b %s\n' "$YELLOW" "$NC" "$*" >&2
-}
-
-fatal() {
-    printf '%b[ERROR]%b %s\n' "$RED" "$NC" "$*" >&2
-    exit 1
-}
+info()  { printf '%s\n' "$*"; }
+warn()  { printf 'warn: %s\n' "$*" >&2; }
+fatal() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 show_help() {
     cat <<'EOF'
 Usage: accinit.sh [--dry-run] [--help]
 
-Applies a non-interactive single-account AWS security baseline.
+Applies a non-interactive single-account AWS security baseline in us-east-1.
 
-Default actions:
-  - enables account-level S3 Block Public Access
-  - enables EBS encryption by default in all enabled regions
-  - creates a dedicated log bucket when needed
-  - creates a multi-region CloudTrail trail if one does not already exist
-  - enables AWS Config in regions where it is not already configured
-  - enables Security Hub in all enabled regions
-  - enables GuardDuty in all enabled regions
-  - enables GuardDuty runtime monitoring
-  - enables Inspector in all enabled regions
-  - creates one account-level IAM Access Analyzer per region when missing
-  - enables Detective in the home region
+Actions:
+  S3 account-level block public access
+  EBS default encryption
+  CloudTrail multi-region trail
+  AWS Config recorder and delivery channel
+  Security Hub with finding aggregation
+  GuardDuty with runtime monitoring
+  Inspector
+  IAM Access Analyzer
+  Detective
 
-Optional actions are controlled with environment variables, not prompts.
-
-Common environment variables:
+Environment variables:
   ENABLE_S3_BLOCK_PUBLIC_ACCESS=true|false
   ENABLE_EBS_ENCRYPTION=true|false
   ENABLE_CLOUDTRAIL=true|false
   ENABLE_CONFIG=true|false
   ENABLE_SECURITY_HUB=true|false
   ENABLE_SECURITY_HUB_AGGREGATION=true|false
-ENABLE_GUARDDUTY=true|false
+  ENABLE_GUARDDUTY=true|false
   ENABLE_GUARDDUTY_RUNTIME_MONITORING=true|false
   ENABLE_INSPECTOR=true|false
   ENABLE_ACCESS_ANALYZER=true|false
   ENABLE_DETECTIVE=true|false
-  HOME_REGION=us-east-1
   LOG_BUCKET_NAME=my-dedicated-bucket
-
-Examples:
-  ./accinit.sh
-  ./accinit.sh --dry-run
-  ENABLE_DETECTIVE=true ./accinit.sh
+  RETRY_MAX=3
 EOF
 }
 
@@ -70,15 +46,27 @@ is_true() {
     [[ "${1:-false}" =~ ^([Tt][Rr][Uu][Ee]|1|[Yy][Ee][Ss])$ ]]
 }
 
+retry() {
+    local n=0
+    until "$@"; do
+        n=$((n + 1))
+        if [[ $n -ge $RETRY_MAX ]]; then
+            return 1
+        fi
+        warn "retrying ($n/$((RETRY_MAX - 1))): $*"
+        sleep $((2 ** n))
+    done
+}
+
 apply() {
     if [[ "$DRY_RUN" == true ]]; then
-        printf '%b[DRY RUN]%b ' "$CYAN" "$NC" >&2
-        printf '%q ' "$@" >&2
+        printf 'dry-run:' >&2
+        printf ' %q' "$@" >&2
         printf '\n' >&2
         return 0
     fi
 
-    "$@"
+    retry "$@"
 }
 
 run_nonfatal() {
@@ -113,7 +101,7 @@ ensure_account_public_access_block() {
         --output text 2>/dev/null || true)
 
     if [[ "$current" == $'True\tTrue\tTrue\tTrue' ]]; then
-        info "Account-level S3 Block Public Access already enabled"
+        info "account-level S3 block public access already enabled"
         return 0
     fi
 
@@ -123,7 +111,7 @@ ensure_account_public_access_block() {
         return 1
     fi
 
-    info "Enabled account-level S3 Block Public Access"
+    info "enabled account-level S3 block public access"
 }
 
 ensure_log_bucket() {
@@ -132,16 +120,10 @@ ensure_log_bucket() {
     encryption_config='{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
     if aws_home s3api head-bucket --bucket "$LOG_BUCKET_NAME" >/dev/null 2>&1; then
-        info "Using existing log bucket $LOG_BUCKET_NAME"
+        info "using existing log bucket $LOG_BUCKET_NAME"
     else
-        info "Creating dedicated log bucket $LOG_BUCKET_NAME"
-        if [[ "$HOME_REGION" == "us-east-1" ]]; then
-            apply aws_home s3api create-bucket --bucket "$LOG_BUCKET_NAME" >/dev/null
-        else
-            apply aws_home s3api create-bucket \
-                --bucket "$LOG_BUCKET_NAME" \
-                --create-bucket-configuration "LocationConstraint=$HOME_REGION" >/dev/null
-        fi
+        info "creating log bucket $LOG_BUCKET_NAME"
+        apply aws_home s3api create-bucket --bucket "$LOG_BUCKET_NAME" >/dev/null
     fi
 
     apply aws_home s3api put-public-access-block \
@@ -223,7 +205,7 @@ EOF
         --bucket "$LOG_BUCKET_NAME" \
         --policy "file://$TMP_DIR/log-bucket-policy.json" >/dev/null
 
-    info "Configured bucket policy, encryption, and versioning for $LOG_BUCKET_NAME"
+    info "configured log bucket $LOG_BUCKET_NAME"
 }
 
 ensure_cloudtrail() {
@@ -250,7 +232,7 @@ ensure_cloudtrail() {
             --include-global-service-events \
             --enable-log-file-validation >/dev/null
         apply aws_region "$named_trail_home_region" cloudtrail start-logging --name "$TRAIL_NAME" >/dev/null
-        info "Updated and started CloudTrail trail $TRAIL_NAME"
+        info "updated and started CloudTrail trail $TRAIL_NAME"
         return 0
     fi
 
@@ -259,8 +241,7 @@ ensure_cloudtrail() {
         --output text 2>/dev/null || true)
 
     if [[ -n "$existing_multi_region" && "$existing_multi_region" != "None" ]]; then
-        info "Existing multi-region CloudTrail trail detected: $existing_multi_region"
-        info "Leaving existing CloudTrail configuration unchanged"
+        info "existing multi-region CloudTrail trail detected: $existing_multi_region — leaving unchanged"
         return 0
     fi
 
@@ -273,7 +254,7 @@ ensure_cloudtrail() {
         --enable-log-file-validation >/dev/null
 
     apply aws_home cloudtrail start-logging --name "$TRAIL_NAME" >/dev/null
-    info "Created and started CloudTrail trail $TRAIL_NAME"
+    info "created and started CloudTrail trail $TRAIL_NAME"
 }
 
 ensure_config_role() {
@@ -283,7 +264,7 @@ ensure_config_role() {
 
     if [[ -n "$role_arn" && "$role_arn" != "None" ]]; then
         CONFIG_ROLE_ARN="$role_arn"
-        info "Using existing Config role $CONFIG_ROLE_NAME"
+        info "using existing Config role $CONFIG_ROLE_NAME"
     else
         cat > "$TMP_DIR/config-role-trust.json" <<EOF
 {
@@ -309,7 +290,7 @@ EOF
         fi
 
         CONFIG_ROLE_ARN="arn:${PARTITION}:iam::${ACCOUNT_ID}:role/${CONFIG_ROLE_NAME}"
-        info "Created Config role $CONFIG_ROLE_NAME"
+        info "created Config role $CONFIG_ROLE_NAME"
     fi
 
     apply aws_home iam attach-role-policy \
@@ -320,7 +301,7 @@ EOF
         CONFIG_ROLE_ARN=$(aws_home iam get-role --role-name "$CONFIG_ROLE_NAME" --query 'Role.Arn' --output text)
     fi
 
-    info "Attached AWS managed Config policy to $CONFIG_ROLE_NAME"
+    info "attached AWS managed Config policy to $CONFIG_ROLE_NAME"
 }
 
 ensure_config_region() {
@@ -338,7 +319,7 @@ ensure_config_region() {
         apply aws_region "$region" configservice put-delivery-channel \
             --delivery-channel "name=${DEFAULT_DELIVERY_CHANNEL_NAME},s3BucketName=${LOG_BUCKET_NAME},s3KeyPrefix=${LOG_PREFIX}/config,configSnapshotDeliveryProperties={deliveryFrequency=${CONFIG_SNAPSHOT_FREQUENCY}}" >/dev/null
         delivery_channel_name="$DEFAULT_DELIVERY_CHANNEL_NAME"
-        info "Created AWS Config delivery channel in $region"
+        info "created AWS Config delivery channel in $region"
     else
         info "AWS Config delivery channel already exists in $region: $delivery_channel_name"
     fi
@@ -348,7 +329,7 @@ ensure_config_region() {
             --configuration-recorder "name=${DEFAULT_RECORDER_NAME},roleARN=${CONFIG_ROLE_ARN}" \
             --recording-group allSupported=true,includeGlobalResourceTypes=false >/dev/null
         recorder_name="$DEFAULT_RECORDER_NAME"
-        info "Created AWS Config recorder in $region"
+        info "created AWS Config recorder in $region"
     else
         info "AWS Config recorder already exists in $region: $recorder_name"
     fi
@@ -363,7 +344,7 @@ ensure_config_region() {
 
     apply aws_region "$region" configservice start-configuration-recorder \
         --configuration-recorder-name "$recorder_name" >/dev/null
-    info "Started AWS Config recorder in $region"
+    info "started AWS Config recorder in $region"
 }
 
 ensure_security_hub_region() {
@@ -377,7 +358,7 @@ ensure_security_hub_region() {
     apply aws_region "$region" securityhub enable-security-hub \
         --enable-default-standards \
         --control-finding-generator SECURITY_CONTROL >/dev/null
-    info "Enabled Security Hub in $region"
+    info "enabled Security Hub in $region"
 }
 
 ensure_security_hub_aggregation() {
@@ -394,7 +375,7 @@ ensure_security_hub_aggregation() {
 
     apply aws_home securityhub create-finding-aggregator \
         --region-linking-mode ALL_REGIONS >/dev/null
-    info "Enabled Security Hub finding aggregation in $HOME_REGION"
+    info "enabled Security Hub finding aggregation in $HOME_REGION"
 }
 
 ensure_guardduty_region() {
@@ -405,21 +386,21 @@ ensure_guardduty_region() {
 
     if [[ -z "$detector_id" || "$detector_id" == "None" ]]; then
         if [[ "$DRY_RUN" == true ]]; then
-            info "[dry-run] Would create GuardDuty detector in $region"
+            info "dry-run: would create GuardDuty detector in $region"
             detector_id="DRYRUN"
         else
-            detector_id=$(aws_region "$region" guardduty create-detector \
+            detector_id=$(retry aws_region "$region" guardduty create-detector \
                 --enable \
                 --finding-publishing-frequency "$GUARDDUTY_FINDING_FREQUENCY" \
                 --query 'DetectorId' --output text)
-            info "Enabled GuardDuty in $region"
+            info "enabled GuardDuty in $region"
         fi
     else
         apply aws_region "$region" guardduty update-detector \
             --detector-id "$detector_id" \
             --enable \
             --finding-publishing-frequency "$GUARDDUTY_FINDING_FREQUENCY" >/dev/null
-        info "Updated GuardDuty detector in $region"
+        info "updated GuardDuty detector in $region"
     fi
 
     if ! is_true "$ENABLE_GUARDDUTY_RUNTIME_MONITORING"; then
@@ -427,14 +408,14 @@ ensure_guardduty_region() {
     fi
 
     if [[ "$detector_id" == "DRYRUN" ]]; then
-        info "[dry-run] Would enable GuardDuty runtime monitoring in $region"
+        info "dry-run: would enable GuardDuty runtime monitoring in $region"
         return 0
     fi
 
     apply aws_region "$region" guardduty update-detector \
         --detector-id "$detector_id" \
         --features 'Name=RUNTIME_MONITORING,Status=ENABLED,AdditionalConfiguration=[{Name=EC2_AGENT_MANAGEMENT,Status=ENABLED},{Name=ECS_FARGATE_AGENT_MANAGEMENT,Status=ENABLED},{Name=EKS_ADDON_MANAGEMENT,Status=ENABLED}]' >/dev/null
-    info "Enabled GuardDuty runtime monitoring in $region"
+    info "enabled GuardDuty runtime monitoring in $region"
 }
 
 ensure_inspector_region() {
@@ -445,12 +426,12 @@ ensure_inspector_region() {
     read -r -a resource_types <<< "$INSPECTOR_RESOURCE_TYPES"
 
     if [[ "$DRY_RUN" == true ]]; then
-        info "[dry-run] Would enable Inspector in $region"
+        info "dry-run: would enable Inspector in $region"
         return 0
     fi
 
-    if output=$(aws_region "$region" inspector2 enable --resource-types "${resource_types[@]}" 2>&1); then
-        info "Enabled Inspector in $region"
+    if output=$(retry aws_region "$region" inspector2 enable --resource-types "${resource_types[@]}" 2>&1); then
+        info "enabled Inspector in $region"
         return 0
     fi
 
@@ -473,14 +454,14 @@ ensure_access_analyzer_region() {
         --output text 2>/dev/null || true)
 
     if [[ -n "$analyzer_name" && "$analyzer_name" != "None" ]]; then
-        info "Account-level Access Analyzer already exists in $region: $analyzer_name"
+        info "account-level Access Analyzer already exists in $region: $analyzer_name"
         return 0
     fi
 
     apply aws_region "$region" accessanalyzer create-analyzer \
         --analyzer-name "$ACCOUNT_ANALYZER_NAME" \
         --type ACCOUNT >/dev/null
-    info "Created account-level Access Analyzer in $region"
+    info "created account-level Access Analyzer in $region"
 }
 
 ensure_ebs_encryption_region() {
@@ -496,7 +477,7 @@ ensure_ebs_encryption_region() {
     fi
 
     apply aws_region "$region" ec2 enable-ebs-encryption-by-default >/dev/null
-    info "Enabled EBS encryption by default in $region"
+    info "enabled EBS encryption by default in $region"
 }
 
 ensure_detective() {
@@ -510,7 +491,7 @@ ensure_detective() {
     fi
 
     apply aws_home detective create-graph >/dev/null
-    info "Enabled Detective in $HOME_REGION"
+    info "enabled Detective in $HOME_REGION"
 }
 
 DRY_RUN=false
@@ -528,7 +509,7 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         *)
-            fatal "Unknown option: $1"
+            fatal "unknown option: $1"
             ;;
     esac
     shift
@@ -545,9 +526,9 @@ ENABLE_GUARDDUTY_RUNTIME_MONITORING="${ENABLE_GUARDDUTY_RUNTIME_MONITORING:-true
 ENABLE_INSPECTOR="${ENABLE_INSPECTOR:-true}"
 ENABLE_ACCESS_ANALYZER="${ENABLE_ACCESS_ANALYZER:-true}"
 ENABLE_DETECTIVE="${ENABLE_DETECTIVE:-true}"
+RETRY_MAX="${RETRY_MAX:-3}"
 
-HOME_REGION="${HOME_REGION:-${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || true)}}}"
-HOME_REGION="${HOME_REGION:-us-east-1}"
+HOME_REGION="us-east-1"
 TRAIL_NAME="${TRAIL_NAME:-awsutils-account-baseline}"
 LOG_PREFIX="${LOG_PREFIX:-account-baseline}"
 CONFIG_ROLE_NAME="${CONFIG_ROLE_NAME:-awsutils-account-config-role}"
@@ -558,28 +539,19 @@ CONFIG_SNAPSHOT_FREQUENCY="${CONFIG_SNAPSHOT_FREQUENCY:-TwentyFour_Hours}"
 GUARDDUTY_FINDING_FREQUENCY="${GUARDDUTY_FINDING_FREQUENCY:-FIFTEEN_MINUTES}"
 INSPECTOR_RESOURCE_TYPES="${INSPECTOR_RESOURCE_TYPES:-EC2 ECR LAMBDA LAMBDA_CODE}"
 
-ACCOUNT_ID=$(aws --no-cli-pager sts get-caller-identity --query 'Account' --output text) || fatal "Unable to resolve AWS account identity"
-CALLER_ARN=$(aws --no-cli-pager sts get-caller-identity --query 'Arn' --output text) || fatal "Unable to resolve caller ARN"
+ACCOUNT_ID=$(aws --no-cli-pager sts get-caller-identity --query 'Account' --output text) || fatal "unable to resolve AWS account identity"
+CALLER_ARN=$(aws --no-cli-pager sts get-caller-identity --query 'Arn' --output text) || fatal "unable to resolve caller ARN"
 IFS=':' read -r _ PARTITION _ _ _ _ <<< "$CALLER_ARN"
 PARTITION="${PARTITION:-aws}"
 LOG_BUCKET_NAME="${LOG_BUCKET_NAME:-awsutils-accinit-${ACCOUNT_ID}-${HOME_REGION}}"
 CONFIG_ROLE_ARN=""
 
-mapfile -t REGIONS < <(aws_home ec2 describe-regions \
-    --all-regions \
-    --query "Regions[?OptInStatus=='opt-in-not-required'||OptInStatus=='opted-in'].RegionName" \
-    --output text | tr '\t' '\n' | LC_ALL=C sort)
+REGIONS=("us-east-1")
 
-if [[ ${#REGIONS[@]} -eq 0 ]]; then
-    fatal "No enabled AWS regions were discovered"
-fi
-
-info "Account: $ACCOUNT_ID"
-info "Home region: $HOME_REGION"
-info "Enabled regions: ${REGIONS[*]}"
+info "account: $ACCOUNT_ID  region: $HOME_REGION"
 
 if is_true "$ENABLE_S3_BLOCK_PUBLIC_ACCESS"; then
-    run_nonfatal "Unable to enforce account-level S3 Block Public Access" ensure_account_public_access_block
+    run_nonfatal "unable to enforce account-level S3 block public access" ensure_account_public_access_block
 fi
 
 if is_true "$ENABLE_CLOUDTRAIL" || is_true "$ENABLE_CONFIG"; then
@@ -635,19 +607,17 @@ if is_true "$ENABLE_DETECTIVE"; then
     run_nonfatal "Detective setup failed in $HOME_REGION" ensure_detective
 fi
 
-printf '%b========== SUMMARY ==========%b\n' "$CYAN" "$NC"
-printf 'Account ID: %s\n' "$ACCOUNT_ID"
-printf 'Home region: %s\n' "$HOME_REGION"
-printf 'Regions: %s\n' "${REGIONS[*]}"
+printf 'account: %s\n' "$ACCOUNT_ID"
+printf 'region: %s\n' "$HOME_REGION"
 
 if is_true "$ENABLE_CLOUDTRAIL" || is_true "$ENABLE_CONFIG"; then
-    printf 'Log bucket: %s\n' "$LOG_BUCKET_NAME"
+    printf 'log bucket: %s\n' "$LOG_BUCKET_NAME"
 fi
 
 if is_true "$ENABLE_CLOUDTRAIL"; then
     printf 'CloudTrail trail: %s\n' "$TRAIL_NAME"
 fi
 
-printf 'Warnings: %s\n' "$WARNING_COUNT"
+printf 'warnings: %d\n' "$WARNING_COUNT"
 
-warn "Manual follow-up still required for root MFA, no root access keys, IAM Identity Center/SSO, and Organizations/SCP guardrails"
+warn "manual follow-up required: root MFA, no root access keys, IAM Identity Center/SSO, Organizations/SCP guardrails"
