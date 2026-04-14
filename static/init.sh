@@ -282,7 +282,7 @@ EOF
 # ── Step 7: Bastion tools ─────────────────────────────────────────────────
 install_bastion_tools() {
     if [ "$OS_VARIANT" = "al2023" ]; then
-        dnf install -y amazon-efs-utils dnf-plugins-core
+        dnf install -y --allowerasing amazon-efs-utils dnf-plugins-core
         dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
         dnf install -y terraform
     else
