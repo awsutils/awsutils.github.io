@@ -183,11 +183,12 @@ setup_app_service() {
 [Unit]
 Description=Application
 After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 Restart=always
-RestartSec=1
+RestartSec=5
 User=root
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${APP_DIR}/app.env
