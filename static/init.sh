@@ -326,19 +326,21 @@ install_bastion_tools() {
 
 # ── Step 8: Docker ────────────────────────────────────────────────────────
 setup_docker() {
-    if [ "$OS_VARIANT" = "al2023" ]; then
-        dnf install -y docker
-    else
-        amazon-linux-extras install -y docker
+    if ! is_cloudshell; then
+        if [ "$OS_VARIANT" = "al2023" ]; then
+            dnf install -y docker
+        else
+            amazon-linux-extras install -y docker
+        fi
+        systemctl enable --now docker
     fi
-
-    systemctl enable --now docker
 
     # Cross-platform (QEMU binfmt) support
     mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc 2>/dev/null || true
     docker run --privileged --rm tonistiigi/binfmt --install all
 
-    cat > /etc/systemd/system/binfmt-qemu.service << 'EOF'
+    if ! is_cloudshell; then
+        cat > /etc/systemd/system/binfmt-qemu.service << 'EOF'
 [Unit]
 Description=Register QEMU binfmt handlers for multi-arch builds
 After=docker.service proc-sys-fs-binfmt_misc.mount
@@ -351,14 +353,13 @@ ExecStart=/usr/bin/docker run --privileged --rm tonistiigi/binfmt --install all
 [Install]
 WantedBy=multi-user.target
 EOF
+        systemctl daemon-reload
+        systemctl enable binfmt-qemu
+        usermod -aG docker ec2-user  2>/dev/null || true
+        usermod -aG docker ssm-user  2>/dev/null || true
+    fi
 
-    systemctl daemon-reload
-    systemctl enable binfmt-qemu
-
-    usermod -aG docker ec2-user  2>/dev/null || true
-    usermod -aG docker ssm-user  2>/dev/null || true
-
-    info "Docker configured (cross-platform support, ec2-user and ssm-user added to docker group)"
+    info "Docker configured (cross-platform support)"
 }
 
 # ── Step 9: Utility commands ───────────────────────────────────────────────
