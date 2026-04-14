@@ -19,6 +19,7 @@ The scripts in this repo are published directly from `static/`, so each file is 
 | [dashboard.sh](./dashboard.sh.md) | Creates or updates the repo's CloudWatch dashboard from the published docs JSON | CloudWatch dashboard bootstrap |
 | [ec2init.sh](./ec2init.sh.md) | Prepares Amazon Linux 2023 EC2 instances for AWS, Terraform, Docker, and Kubernetes work | EC2 workstation bootstrap |
 | [vpce.sh](./vpce.sh.md) | Interactive VPC endpoint creation helper | Building private-network access to AWS services |
+| [init.sh](./init.sh.md) | Full-stack EC2 bootstrap: app deployment, CloudWatch, bastion tools, Docker, and utility commands | General-purpose EC2 instance init |
 
 ## How These Scripts Are Published
 
