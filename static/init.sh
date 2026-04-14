@@ -19,8 +19,7 @@ if [ "$(id -u)" != "0" ]; then
     info "Re-executing as root in background (output → $LOG_FILE)..."
     curl -fsSL "$SCRIPT_URL" -o /tmp/_init.sh
     chmod +x /tmp/_init.sh
-    mkdir -p "$(dirname "$LOG_FILE")"
-    nohup sudo bash /tmp/_init.sh > "$LOG_FILE" 2>&1 &
+    nohup sudo bash /tmp/_init.sh > /dev/null 2>&1 &
     disown
     sleep 1
     clear
