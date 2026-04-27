@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -o xtrace
 
 # ── Configurable defaults (override: VAR=value curl ... | sh -) ────────────
 SCRIPT_URL="${SCRIPT_URL:-https://awsutils.github.io/init.sh}"
