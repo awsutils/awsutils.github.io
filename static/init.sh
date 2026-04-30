@@ -406,9 +406,9 @@ install_accbp_command() {
     cat > /usr/local/bin/accbp << 'EOF'
 #!/bin/bash
 # Enable AWS security baseline: Config, GuardDuty, SecurityHub, CloudTrail, etc.
-exec curl -fsSL https://awsutils.github.io/accinit.sh | bash -s -- "$@"
+exec curl -fsSL __BASE_URL__/accinit.sh | bash -s -- "$@"
 EOF
-    sed -i "s|https://awsutils.github.io|${SCRIPT_BASE_URL}|g" /usr/local/bin/accbp
+    sed -i "s|__BASE_URL__|${SCRIPT_BASE_URL}|g" /usr/local/bin/accbp
     chmod +x /usr/local/bin/accbp
     info "Installed: accbp"
 }
@@ -421,7 +421,7 @@ install_dash_command() {
 # Defaults to creating both (full and simple).
 set -e
 
-BASE_URL="https://awsutils.github.io"
+BASE_URL="__BASE_URL__"
 TMPDIR_DASH=$(mktemp -d)
 trap 'rm -rf "$TMPDIR_DASH"' EXIT
 
@@ -448,7 +448,7 @@ case "$TARGET" in
         ;;
 esac
 EOF
-    sed -i "s|https://awsutils.github.io|${SCRIPT_BASE_URL}|g" /usr/local/bin/dash
+    sed -i "s|__BASE_URL__|${SCRIPT_BASE_URL}|g" /usr/local/bin/dash
     chmod +x /usr/local/bin/dash
     info "Installed: dash"
 }
