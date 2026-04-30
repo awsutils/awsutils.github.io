@@ -396,6 +396,42 @@ EOF
     info "Installed: accbp"
 }
 
+install_dash_command() {
+    cat > /usr/local/bin/dash << 'EOF'
+#!/bin/bash
+# dash [full|simple|all]
+# Download and create CloudWatch dashboards.
+# Defaults to creating both (full and simple).
+set -e
+
+BASE_URL="https://awsutils.github.io"
+TMPDIR_DASH=$(mktemp -d)
+trap 'rm -rf "$TMPDIR_DASH"' EXIT
+
+TARGET="${1:-all}"
+
+create_dashboard() {
+    local name="$1" file="$2"
+    local url="${BASE_URL}/${file}"
+    local dest="${TMPDIR_DASH}/${file}"
+    curl -fsSL "$url" -o "$dest"
+    aws cloudwatch put-dashboard --dashboard-name "$name" --dashboard-body "file://${dest}"
+    printf 'Created dashboard: %s\n' "$name"
+}
+
+case "$TARGET" in
+    full)  create_dashboard "dashboard-full"   "dashboard_full.json" ;;
+    simple) create_dashboard "dashboard-simple" "dashboard_simple.json" ;;
+    all|*)
+        create_dashboard "dashboard-full"   "dashboard_full.json"
+        create_dashboard "dashboard-simple" "dashboard_simple.json"
+        ;;
+esac
+EOF
+    chmod +x /usr/local/bin/dash
+    info "Installed: dash"
+}
+
 install_vpc_command() {
     cat > /usr/local/bin/vpc << 'EOF'
 #!/bin/bash
@@ -615,5 +651,6 @@ setup_docker
 install_ecr_command
 install_accbp_command
 install_vpc_command
+install_dash_command
 
 info "=== init.sh complete at $(date) ==="

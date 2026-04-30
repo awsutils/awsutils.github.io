@@ -1,0 +1,838 @@
+{
+  "variables": [
+    {
+      "type": "property",
+      "property": "region",
+      "inputType": "input",
+      "id": "region",
+      "label": "Region",
+      "defaultValue": "us-east-1",
+      "visible": true
+    },
+    {
+      "type": "property",
+      "property": "Namespace",
+      "inputType": "select",
+      "id": "Namespace",
+      "label": "[EKS] Namespace",
+      "defaultValue": "",
+      "visible": true,
+      "search": "{ContainerInsights,ClusterName,Namespace}",
+      "populateFrom": "Namespace"
+    }
+  ],
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer} MetricName=\"HTTPCode_ELB_5XX_Count\"', 'Sum', 60), 0)",
+              "id": "alb_elb_5xx",
+              "label": "ALB ELB 5XX",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"HTTPCode_Target_5XX_Count\"', 'Sum', 60), 0)",
+              "id": "alb_target_5xx",
+              "label": "ALB Target 5XX",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/NetworkELB,LoadBalancer,TargetGroup} MetricName=\"HTTPCode_Target_5XX_Count\"', 'Sum', 60), 0)",
+              "id": "nlb_5xx",
+              "label": "NLB 5XX",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApiGateway,ApiId,Stage} MetricName=\"5XXError\"', 'Sum', 60), 0)",
+              "id": "apigw_5xx",
+              "label": "API GW 5XX",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/CloudFront,DistributionId,Region} MetricName=\"5xxErrorRate\"', 'p99', 60), 0)",
+              "id": "cf_5xx_rate",
+              "label": "CloudFront 5XX Rate (%)",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/VpcLattice,Service,TargetGroup} MetricName=\"HTTPCode_Target_5XX_Count\"', 'Sum', 60), 0)",
+              "id": "lattice_5xx",
+              "label": "Lattice 5XX",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Errors\"', 'Sum', 60), 0)",
+              "id": "lambda_errors",
+              "region": "us-east-1",
+              "label": "Lambda Errors"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "title": "🚦 5XX Errors + Lambda Error Rate",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "p99"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 6,
+      "y": 13,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer,AvailabilityZone,TargetGroup} MetricName=\"HTTPCode_Target_5XX_Count\"', 'Sum', 60), 0)",
+              "id": "alb_5xx_az",
+              "label": "ALB 5XX / AZ"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer,AvailabilityZone} MetricName=\"HTTPCode_ELB_5XX_Count\"', 'Sum', 60), 0)",
+              "id": "alb_elb_5xx_az",
+              "label": "ALB ELB 5XX / AZ",
+              "color": "#d62728"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer,AvailabilityZone} MetricName=\"HTTPCode_ELB_4XX_Count\"', 'Sum', 60), 0)",
+              "id": "alb_elb_4xx_az",
+              "label": "ALB ELB 4XX / AZ",
+              "color": "#ff7f0e"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/NetworkELB,LoadBalancer,AvailabilityZone,TargetGroup} MetricName=\"TargetConnectionErrorCount\"', 'Sum', 60), 0)",
+              "id": "nlb_err_az",
+              "label": "NLB Conn Errors / AZ"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "title": "ALB/NLB Error Count by AZ",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"HTTPCode_Target_2XX_Count\"', 'Sum', 60))",
+              "id": "alb_2xx",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"HTTPCode_Target_3XX_Count\"', 'Sum', 60))",
+              "id": "alb_3xx",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"HTTPCode_Target_4XX_Count\"', 'Sum', 60))",
+              "id": "alb_4xx",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"HTTPCode_Target_5XX_Count\"', 'Sum', 60))",
+              "id": "alb_5xx_tot",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApplicationELB,LoadBalancer} MetricName=\"HTTPCode_ELB_4XX_Count\"', 'Sum', 60))",
+              "id": "alb_elb_4xx",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApplicationELB,LoadBalancer} MetricName=\"HTTPCode_ELB_5XX_Count\"', 'Sum', 60))",
+              "id": "alb_elb_5xx_sum",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/VpcLattice,Service,TargetGroup} MetricName=\"HTTPCode_Target_2XX_Count\"', 'Sum', 60))",
+              "id": "lattice_2xx",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/VpcLattice,Service,TargetGroup} MetricName=\"HTTPCode_Target_4XX_Count\"', 'Sum', 60))",
+              "id": "lattice_4xx_sum",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/VpcLattice,Service,TargetGroup} MetricName=\"HTTPCode_Target_5XX_Count\"', 'Sum', 60))",
+              "id": "lattice_5xx_tot",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApiGateway,ApiId,Stage} MetricName=\"Count\"', 'Sum', 60))",
+              "id": "apigw_count_tot",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApiGateway,ApiId,Stage} MetricName=\"4XXError\"', 'Sum', 60))",
+              "id": "apigw_4xx",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/ApiGateway,ApiId,Stage} MetricName=\"5XXError\"', 'Sum', 60))",
+              "id": "apigw_5xx_tot",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "SUM(SEARCH('{AWS/CloudFront,DistributionId,Region} MetricName=\"Requests\"', 'Sum', 60))",
+              "id": "cf_requests_tot",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "AVG(SEARCH('{AWS/CloudFront,DistributionId,Region} MetricName=\"4xxErrorRate\"', 'Average', 60))",
+              "id": "cf_4xx_rate",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "AVG(SEARCH('{AWS/CloudFront,DistributionId,Region} MetricName=\"5xxErrorRate\"', 'Average', 60))",
+              "id": "cf_5xx_rate_avg",
+              "region": "us-east-1",
+              "visible": false
+            }
+          ],
+          [
+            {
+              "expression": "cf_requests_tot*cf_4xx_rate/100",
+              "id": "cf_4xx_cnt",
+              "visible": false,
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "cf_requests_tot*cf_5xx_rate_avg/100",
+              "id": "cf_5xx_cnt",
+              "visible": false,
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "cf_requests_tot - cf_4xx_cnt - cf_5xx_cnt",
+              "id": "cf_2xx_cnt",
+              "visible": false,
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "apigw_count_tot - apigw_4xx - apigw_5xx_tot",
+              "id": "apigw_2xx_calc",
+              "visible": false,
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "alb_5xx_tot + alb_elb_5xx_sum + lattice_5xx_tot + apigw_5xx_tot + cf_5xx_cnt",
+              "label": "5XX",
+              "id": "total_5xx",
+              "color": "#d62728",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "alb_4xx + alb_elb_4xx + lattice_4xx_sum + apigw_4xx + cf_4xx_cnt",
+              "label": "4XX",
+              "id": "total_4xx",
+              "color": "#ff7f0e",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "alb_3xx",
+              "label": "3XX",
+              "id": "total_3xx",
+              "color": "#1f77b4",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            {
+              "expression": "alb_2xx + lattice_2xx + apigw_2xx_calc + cf_2xx_cnt",
+              "label": "2XX",
+              "id": "total_2xx",
+              "color": "#2ca02c",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": true,
+        "region": "us-east-1",
+        "title": "All Front Doors: HTTP Status Mix (Stacked)",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 6,
+      "y": 0,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"TargetResponseTime\"', 'p99', 60)*1000, 0)",
+              "id": "alb_p99",
+              "label": "ALB P99 (ms)"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/NetworkELB,LoadBalancer,TargetGroup} MetricName=\"TargetResponseTime\"', 'p99', 60)*1000, 0)",
+              "id": "nlb_p99",
+              "label": "NLB P99 (ms)"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApiGateway,ApiId,Stage} MetricName=\"Latency\"', 'p99', 60), 0)",
+              "id": "apigw_p99",
+              "label": "API GW P99 (ms)"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/CloudFront,DistributionId,Region} MetricName=\"OriginLatency\"', 'p99', 60), 0)",
+              "id": "cf_p99",
+              "label": "CloudFront P99 (ms)"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/VpcLattice,Service,TargetGroup} MetricName=\"RequestTime\"', 'p99', 60), 0)",
+              "id": "lattice_p99",
+              "label": "Lattice P99 (ms)"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Duration\"', 'p99', 60), 0)",
+              "id": "lambda_duration_p99",
+              "label": "Lambda P99 (ms)"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "title": "⚡ P99 Latency (CF/API GW/ALB/NLB/Lattice/Lambda)",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "p99"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"HealthyHostCount\"', 'p99', 60)",
+              "id": "alb_healthy",
+              "label": "ALB Healthy"
+            }
+          ],
+          [
+            {
+              "expression": "SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"UnHealthyHostCount\"', 'p99', 60)",
+              "id": "alb_unhealthy",
+              "label": "ALB Unhealthy"
+            }
+          ],
+          [
+            {
+              "expression": "SEARCH('{AWS/NetworkELB,LoadBalancer,TargetGroup} MetricName=\"HealthyHostCount\"', 'p99', 60)",
+              "id": "nlb_healthy",
+              "label": "NLB Healthy"
+            }
+          ],
+          [
+            {
+              "expression": "SEARCH('{AWS/NetworkELB,LoadBalancer,TargetGroup} MetricName=\"UnHealthyHostCount\"', 'p99', 60)",
+              "id": "nlb_unhealthy",
+              "label": "NLB Unhealthy"
+            }
+          ],
+          [
+            {
+              "expression": "SEARCH('{AWS/VpcLattice,Service,TargetGroup} MetricName=\"HealthyHostCount\"', 'Average', 60)",
+              "id": "lattice_healthy",
+              "label": "Lattice Healthy"
+            }
+          ],
+          [
+            {
+              "expression": "SEARCH('{AWS/VpcLattice,Service,TargetGroup} MetricName=\"UnHealthyHostCount\"', 'Average', 60)",
+              "id": "lattice_unhealthy",
+              "label": "Lattice Unhealthy"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "title": "🏥 Target Health Status (ALB, NLB, Lattice)",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "p99"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 18,
+      "y": 0,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"RequestCount\"', 'Sum', 60), 0)",
+              "id": "alb_req",
+              "label": "ALB Requests"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/NetworkELB,LoadBalancer,TargetGroup} MetricName=\"NewFlowCount\"', 'Sum', 60), 0)",
+              "id": "nlb_flows",
+              "label": "NLB New Flows"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApiGateway,ApiId,Stage} MetricName=\"Count\"', 'Sum', 60), 0)",
+              "id": "apigw_count",
+              "label": "API GW Count"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/CloudFront,DistributionId,Region} MetricName=\"Requests\"', 'Sum', 60), 0)",
+              "id": "cf_requests",
+              "label": "CloudFront Requests"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/VpcLattice,Service,TargetGroup} MetricName=\"RequestCount\"', 'Sum', 60), 0)",
+              "id": "lattice_req",
+              "label": "Lattice Requests"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Invocations\"', 'Sum', 60), 0)",
+              "id": "lambda_invocations",
+              "label": "Lambda Invocations"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "title": "📊 Traffic/Min (CF/API GW/ALB/NLB/Lattice/Lambda)",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 13,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer,AvailabilityZone} MetricName=\"RequestCount\"', 'Sum', 60), 0)",
+              "id": "alb_req_az",
+              "label": "ALB Requests / AZ"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/NetworkELB,LoadBalancer,AvailabilityZone} MetricName=\"NewFlowCount\"', 'Sum', 60), 0)",
+              "id": "nlb_flows_az",
+              "label": "NLB New Flows / AZ"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "title": "ALB/NLB Request Rate by AZ",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 13,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/ApplicationELB,LoadBalancer,AvailabilityZone} MetricName=\"TargetResponseTime\"', 'p99', 60)*1000, 0)",
+              "id": "alb_lat_az_p99",
+              "label": "ALB P99 / AZ (ms)"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/NetworkELB,LoadBalancer,AvailabilityZone} MetricName=\"TargetResponseTime\"', 'p99', 60)*1000, 0)",
+              "id": "nlb_lat_az_p99",
+              "label": "NLB P99 / AZ (ms)"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "title": "ALB/NLB P99 Latency by AZ",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "p99"
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 12,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "## Chaos Detection\n",
+        "background": "transparent"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "FILL(SEARCH('{AWS/EC2,InstanceId} MetricName=\"CPUUtilization\"', 'Maximum', 60), 0)",
+              "id": "ec2_cpu_util",
+              "label": "EC2 CPU (%)"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{ContainerInsights,ClusterName,Namespace} MetricName=\"pod_cpu_utilization\"', 'p99', 60), 0)",
+              "id": "eks_pod_cpu",
+              "label": "EKS Pod CPU (p99%)"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{ECS/ContainerInsights,ClusterName,ServiceName,TaskId} MetricName=\"TaskCpuUtilization\"', 'p99', 60), 0)",
+              "id": "ecs_task_cpu",
+              "label": "ECS Task CPU (p99%)"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "Compute CPU Utilization (EC2 / EKS Pod / ECS Task)",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "Average",
+        "yAxis": {
+          "left": {
+            "showUnits": false,
+            "label": "CPU Utilization (%)",
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 18,
+      "y": 6,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "FILL(SEARCH('{CWAgent,InstanceId} MetricName=\"mem_used_percent\"', 'Average', 60), 0)",
+              "id": "ec2_mem_util",
+              "label": "EC2 Mem (%)",
+              "color": "#9467bd"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{ContainerInsights,ClusterName,Namespace} MetricName=\"pod_memory_utilization\"', 'p99', 60), 0)",
+              "id": "eks_pod_mem",
+              "label": "EKS Pod Mem (p99%)",
+              "color": "#8c564b"
+            }
+          ],
+          [
+            {
+              "expression": "FILL(SEARCH('{ECS/ContainerInsights,ClusterName,ServiceName,TaskId} MetricName=\"TaskMemoryUtilization\"', 'p99', 60), 0)",
+              "id": "ecs_task_mem",
+              "label": "ECS Task Mem (p99%)",
+              "color": "#17becf"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "Compute Memory Utilization (EC2 / EKS Pod / ECS Task)",
+        "period": 60,
+        "liveData": false,
+        "legend": {
+          "position": "hidden"
+        },
+        "stat": "Average",
+        "yAxis": {
+          "left": {
+            "showUnits": false,
+            "label": "Memory Utilization (%)",
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 19,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "## Application Logs\n",
+        "background": "transparent"
+      }
+    },
+    {
+      "type": "log",
+      "x": 0,
+      "y": 20,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE logGroups(namePrefix: [\"/aws/containerinsights/\"], class: \"STANDARD\")  |\nfields @timestamp, kubernetes.container_name as Container, kubernetes.namespace_name as Namespace, log\n| filter log like /(?i)(error|exception|fatal|critical)/\n| sort @timestamp desc\n| limit 50",
+        "queryBy": "logGroupPrefix",
+        "logGroupPrefixes": {
+          "accountIds": ["All"],
+          "logGroupPrefix": ["/aws/containerinsights/"],
+          "logClass": "STANDARD"
+        },
+        "region": "us-east-1",
+        "stacked": false,
+        "title": "[EKS] Error Logs (Last 50)",
+        "view": "table"
+      }
+    },
+    {
+      "type": "log",
+      "x": 0,
+      "y": 26,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE logGroups(namePrefix: [\"/aws/containerinsights/\"], class: \"STANDARD\")  |\nfields kubernetes.container_name as Container, log\n| filter not isblank(log)\n| sort @timestamp desc\n| limit 100",
+        "queryBy": "logGroupPrefix",
+        "logGroupPrefixes": {
+          "accountIds": ["All"],
+          "logGroupPrefix": ["/aws/containerinsights/"],
+          "logClass": "STANDARD"
+        },
+        "region": "us-east-1",
+        "stacked": false,
+        "title": "[EKS] Recent Container Logs (Last 100)",
+        "view": "table"
+      }
+    },
+    {
+      "type": "log",
+      "x": 12,
+      "y": 26,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE logGroups(namePrefix: [\"/aws/ecs/\"], class: \"STANDARD\")  |\nfields @entity.KeyAttributes.Name as Service, @message\n| sort @timestamp desc\n| filter @log not like /containerinsights/\n| limit 100",
+        "queryBy": "logGroupPrefix",
+        "logGroupPrefixes": {
+          "accountIds": ["All"],
+          "logGroupPrefix": ["/aws/ecs/"],
+          "logClass": "STANDARD"
+        },
+        "region": "us-east-1",
+        "stacked": false,
+        "title": "[ECS] Recent Container Logs (Last 100)",
+        "view": "table"
+      }
+    },
+    {
+      "type": "log",
+      "x": 0,
+      "y": 159,
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE logGroups(namePrefix: [\"/aws/lambda/\"], class: \"STANDARD\")  |\nfields @timestamp, @message\n| filter @message like /(?i)(error|exception|timeout|out of memory)/\n| sort @timestamp desc\n| limit 100",
+        "queryBy": "logGroupPrefix",
+        "logGroupPrefixes": {
+          "accountIds": ["All"],
+          "logGroupPrefix": ["/aws/lambda/"],
+          "logClass": "STANDARD"
+        },
+        "region": "us-east-1",
+        "stacked": false,
+        "title": "Lambda Error Logs (Last 100)",
+        "view": "table"
+      }
+    },
+    {
+      "type": "log",
+      "x": 12,
+      "y": 20,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE logGroups(namePrefix: [\"/aws/ecs/\"], class: \"STANDARD\")  |\nfields @timestamp, @entity.KeyAttributes.Name as Service, @message\n| filter @message like /(?i)(error|exception|fatal|critical)/\n| filter @log not like /containerinsights/\n| sort @timestamp desc\n| limit 50",
+        "queryBy": "logGroupPrefix",
+        "logGroupPrefixes": {
+          "accountIds": ["All"],
+          "logGroupPrefix": ["/aws/ecs/"],
+          "logClass": "STANDARD"
+        },
+        "region": "us-east-1",
+        "stacked": false,
+        "title": "[ECS] Error Logs (Last 50)",
+        "view": "table"
+      }
+    }
+  ]
+}
