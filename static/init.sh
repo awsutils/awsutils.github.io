@@ -1,6 +1,4 @@
 #!/bin/bash
-set -o xtrace
-
 # ── Configurable defaults (override: VAR=value curl ... | sh -) ────────────
 SCRIPT_URL="${SCRIPT_URL:-https://awsutils.github.io/init.sh}"
 LOG_FILE="${LOG_FILE:-/var/log/init.log}"
@@ -13,6 +11,7 @@ warn()  { printf '[WARN] %s\n' "$*" >&2; }
 fatal() { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
 
 is_cloudshell() { [ "${AWS_EXECUTION_ENV:-}" = "CloudShell" ]; }
+has_aws_access() { aws sts get-caller-identity > /dev/null 2>&1; }
 
 # ── Step 1: Self-elevate as root and background ────────────────────────────
 if [ "$(id -u)" != "0" ]; then
@@ -381,7 +380,9 @@ set -e
 REPO=${1:?Usage: ecr <repository_name> [tag]}
 TAG=${2:-latest}
 REGION=$(aws configure get region 2>/dev/null || echo "${AWS_DEFAULT_REGION:-us-east-1}")
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null) || {
+    printf '[ERROR] No AWS API access\n' >&2; exit 1
+}
 REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
 aws ecr create-repository --repository-name "$REPO" --region "$REGION" 2>/dev/null || true
@@ -423,8 +424,11 @@ create_dashboard() {
     local url="${BASE_URL}/${file}"
     local dest="${TMPDIR_DASH}/${file}"
     curl -fsSL "$url" -o "$dest"
-    aws cloudwatch put-dashboard --dashboard-name "$name" --dashboard-body "file://${dest}"
-    printf 'Created dashboard: %s\n' "$name"
+    if aws cloudwatch put-dashboard --dashboard-name "$name" --dashboard-body "file://${dest}" 2>/dev/null; then
+        printf 'Created dashboard: %s\n' "$name"
+    else
+        printf '[WARN] No permission to create dashboard: %s; skipping\n' "$name" >&2
+    fi
 }
 
 case "$TARGET" in
@@ -449,7 +453,9 @@ install_vpc_command() {
 set -e
 
 export AWS_PAGER=""
-REGION=$(aws ec2 describe-availability-zones --query 'AvailabilityZones[0].RegionName' --output text)
+REGION=$(aws ec2 describe-availability-zones --query 'AvailabilityZones[0].RegionName' --output text 2>/dev/null) || {
+    printf '[ERROR] No AWS API access\n' >&2; exit 1
+}
 CW_RETENTION="${CW_RETENTION:-7}"
 
 info()  { printf '[INFO] %s\n' "$*"; }
@@ -646,11 +652,15 @@ EOF
 # ── Main ───────────────────────────────────────────────────────────────────
 
 if ! is_cloudshell; then
-    install_cloudwatch_agent
-    download_app
-    if [ "$APP_DOWNLOADED" = "true" ]; then
-        setup_app_service
-        setup_app_watcher
+    if has_aws_access; then
+        install_cloudwatch_agent
+        download_app
+        if [ "$APP_DOWNLOADED" = "true" ]; then
+            setup_app_service
+            setup_app_watcher
+        fi
+    else
+        warn "No AWS API access; skipping CloudWatch agent and app download"
     fi
 fi
 
