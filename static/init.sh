@@ -23,7 +23,6 @@ if [ "$(id -u)" != "0" ]; then
     disown
     sleep 1
     clear
-    printf 'Initialization running in background.\nTail logs: tail -f %s\n' "$LOG_FILE"
     exit 0
 fi
 
