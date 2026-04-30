@@ -7,7 +7,6 @@ _detect_script_url() {
     printf '%s' "$cmd" | grep -oE 'https?://[^[:space:]]+\.sh' | head -1
 }
 SCRIPT_URL="${SCRIPT_URL:-$(_detect_script_url)}"
-SCRIPT_URL="${SCRIPT_URL:-https://awsutils.github.io/init.sh}"
 SCRIPT_BASE_URL="$(printf '%s' "$SCRIPT_URL" | grep -oE 'https?://[^/]+')"
 LOG_FILE="${LOG_FILE:-/var/log/init.log}"
 APP_DIR="${APP_DIR:-/opt/app}"
