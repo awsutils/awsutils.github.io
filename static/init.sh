@@ -326,9 +326,14 @@ install_bastion_tools() {
     install -o root -g root -m 0755 /tmp/cwproxy /usr/local/bin/cwproxy
     rm -f /tmp/cwproxy
 
-    # bptools (installed as inspector)
-    curl -fsSL "${SCRIPT_BASE_URL}/bptools/install.sh" | sh
-    mv /usr/local/bin/bptools /usr/local/bin/inspector
+    # bptools (install only; do not auto-run)
+    local bptools_asset bptools_tmp
+    bptools_asset="bptools-linux-${ARCH}"
+    bptools_tmp=$(mktemp)
+    curl -fsSL "${SCRIPT_BASE_URL}/bptools/${bptools_asset}" -o "$bptools_tmp"
+    chmod +x "$bptools_tmp"
+    install -o root -g root -m 0755 "$bptools_tmp" /usr/local/bin/inspector
+    rm -f "$bptools_tmp"
 
     info "Bastion tools installed (terraform, kubectl, eksctl, helm, k9s, awscli v2, cwproxy, inspector)"
 }
