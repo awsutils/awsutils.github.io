@@ -1,29 +1,7 @@
 #!/bin/bash
 # ── Configurable defaults (override: VAR=value curl ... | sh -) ────────────
-# When piped via "curl URL | sh -", detect the URL from the parent shell's cmdline
-_detect_script_url() {
-    local f cmd url token
-    # curl is a pipeline sibling (not the parent), so scan all processes
-    for f in /proc/[0-9]*/cmdline; do
-        cmd=$(tr '\0' ' ' < "$f" 2>/dev/null) || continue
-        case "$cmd" in *curl*) ;; *) continue ;; esac
-        # prefer explicit scheme
-        url=$(printf '%s' "$cmd" | grep -oE 'https?://[^[:space:]]+' | head -1)
-        if [ -z "$url" ]; then
-            # bare URL: first non-flag, non-"curl" token that looks like a hostname
-            for token in $(printf '%s' "$cmd" | tr ' ' '\n'); do
-                case "$token" in
-                    curl|'') continue ;;
-                    -*) continue ;;
-                    *.*/*|*.*) url="https://${token}"; break ;;
-                esac
-            done
-        fi
-        [ -n "$url" ] && { printf '%s' "$url"; return; }
-    done
-}
-SCRIPT_URL="${SCRIPT_URL:-$(_detect_script_url)}"
-SCRIPT_BASE_URL="$(printf '%s' "$SCRIPT_URL" | grep -oE 'https?://[^/]+')"
+SCRIPT_BASE_URL="${SCRIPT_BASE_URL:-https://awsutils.github.io}"
+SCRIPT_URL="${SCRIPT_URL:-${SCRIPT_BASE_URL}/init.sh}"
 LOG_FILE="${LOG_FILE:-/var/log/init.log}"
 APP_DIR="${APP_DIR:-/opt/app}"
 APP_LOG="${APP_LOG:-/var/log/app.log}"
@@ -38,12 +16,6 @@ has_aws_access() { aws sts get-caller-identity > /dev/null 2>&1; }
 
 # ── Step 1: Self-elevate as root and background ────────────────────────────
 if [ "$(id -u)" != "0" ]; then
-    if [ -z "$SCRIPT_URL" ]; then
-        fatal "Re-execution as root requires the script URL. Run as root directly:
-  curl ${SCRIPT_BASE_URL:-<url>} | sudo sh -
-or pass the URL explicitly:
-  SCRIPT_URL=https://<host>/path curl <url> | sh -"
-    fi
     info "Re-executing as root in background (output → $LOG_FILE)..."
     curl -fsSL "$SCRIPT_URL" -o /tmp/_init.sh
     chmod +x /tmp/_init.sh
