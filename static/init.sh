@@ -8,6 +8,7 @@ _detect_script_url() {
 }
 SCRIPT_URL="${SCRIPT_URL:-$(_detect_script_url)}"
 SCRIPT_URL="${SCRIPT_URL:-https://awsutils.github.io/init.sh}"
+SCRIPT_BASE_URL="$(printf '%s' "$SCRIPT_URL" | grep -oE 'https?://[^/]+')"
 LOG_FILE="${LOG_FILE:-/var/log/init.log}"
 APP_DIR="${APP_DIR:-/opt/app}"
 APP_LOG="${APP_LOG:-/var/log/app.log}"
@@ -329,12 +330,12 @@ install_bastion_tools() {
     rm -f /tmp/k9s
 
     # cwproxy
-    curl -fsSL "https://awsutils.github.io/cwproxy/cwproxy-linux-${ARCH}" -o /tmp/cwproxy
+    curl -fsSL "${SCRIPT_BASE_URL}/cwproxy/cwproxy-linux-${ARCH}" -o /tmp/cwproxy
     install -o root -g root -m 0755 /tmp/cwproxy /usr/local/bin/cwproxy
     rm -f /tmp/cwproxy
 
     # bptools
-    curl -fsSL "https://awsutils.github.io/bptools/install.sh" | sh
+    curl -fsSL "${SCRIPT_BASE_URL}/bptools/install.sh" | sh
 
     info "Bastion tools installed (terraform, kubectl, eksctl, helm, k9s, awscli v2, cwproxy, bptools)"
 }
@@ -408,6 +409,7 @@ install_accbp_command() {
 # Enable AWS security baseline: Config, GuardDuty, SecurityHub, CloudTrail, etc.
 exec curl -fsSL https://awsutils.github.io/accinit.sh | bash -s -- "$@"
 EOF
+    sed -i "s|https://awsutils.github.io|${SCRIPT_BASE_URL}|g" /usr/local/bin/accbp
     chmod +x /usr/local/bin/accbp
     info "Installed: accbp"
 }
@@ -447,6 +449,7 @@ case "$TARGET" in
         ;;
 esac
 EOF
+    sed -i "s|https://awsutils.github.io|${SCRIPT_BASE_URL}|g" /usr/local/bin/dash
     chmod +x /usr/local/bin/dash
     info "Installed: dash"
 }
