@@ -1,5 +1,12 @@
 #!/bin/bash
 # ── Configurable defaults (override: VAR=value curl ... | sh -) ────────────
+# When piped via "curl URL | sh -", detect the URL from the parent shell's cmdline
+_detect_script_url() {
+    local cmd
+    cmd=$(tr '\0' ' ' < "/proc/${PPID}/cmdline" 2>/dev/null) || return 1
+    printf '%s' "$cmd" | grep -oE 'https?://[^[:space:]]+\.sh' | head -1
+}
+SCRIPT_URL="${SCRIPT_URL:-$(_detect_script_url)}"
 SCRIPT_URL="${SCRIPT_URL:-https://awsutils.github.io/init.sh}"
 LOG_FILE="${LOG_FILE:-/var/log/init.log}"
 APP_DIR="${APP_DIR:-/opt/app}"
