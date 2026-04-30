@@ -191,7 +191,7 @@ RestartSec=5
 User=root
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${APP_DIR}/app.env
-ExecStart=${exec_start}
+ExecStart=cwproxy ${exec_start}
 StandardOutput=append:${APP_LOG}
 StandardError=append:${APP_LOG}
 
