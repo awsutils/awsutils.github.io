@@ -89,7 +89,7 @@
         ],
         "view": "timeSeries",
         "region": "us-east-1",
-        "title": "🚦 5XX Errors + Lambda Error Rate",
+        "title": "5XX Errors + Lambda Error Rate",
         "period": 60,
         "liveData": false,
         "legend": {
@@ -410,7 +410,7 @@
         ],
         "view": "timeSeries",
         "region": "us-east-1",
-        "title": "⚡ P99 Latency (CF/API GW/ALB/NLB/Lattice/Lambda)",
+        "title": "P99 Latency (CF/API GW/ALB/NLB/Lattice/Lambda)",
         "period": 60,
         "liveData": false,
         "legend": {
@@ -472,7 +472,7 @@
         ],
         "view": "timeSeries",
         "region": "us-east-1",
-        "title": "🏥 Target Health Status (ALB, NLB, Lattice)",
+        "title": "Target Health Status (ALB, NLB, Lattice)",
         "period": 60,
         "liveData": false,
         "legend": {
@@ -534,7 +534,7 @@
         ],
         "view": "timeSeries",
         "region": "us-east-1",
-        "title": "📊 Traffic/Min (CF/API GW/ALB/NLB/Lattice/Lambda)",
+        "title": "Traffic/Min (CF/API GW/ALB/NLB/Lattice/Lambda)",
         "period": 60,
         "liveData": false,
         "legend": {
@@ -643,17 +643,6 @@
             "label": "Error Count"
           }
         }
-      }
-    },
-    {
-      "type": "text",
-      "x": 0,
-      "y": 12,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## Chaos Detection\n",
-        "background": "transparent"
       }
     },
     {
@@ -853,17 +842,6 @@
             }
           ]
         }
-      }
-    },
-    {
-      "type": "text",
-      "x": 0,
-      "y": 45,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## 🌐 Load Balancer & API Gateway Metrics",
-        "background": "transparent"
       }
     },
     {
@@ -1528,17 +1506,6 @@
       }
     },
     {
-      "type": "text",
-      "x": 0,
-      "y": 76,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## 🐳 Container & Orchestration Metrics",
-        "background": "transparent"
-      }
-    },
-    {
       "type": "metric",
       "x": 12,
       "y": 6,
@@ -2197,8 +2164,12 @@
         "query": "SOURCE logGroups(namePrefix: [\"/aws/containerinsights/\"], class: \"STANDARD\")  |\nfields @timestamp, kubernetes.container_name as Container, kubernetes.namespace_name as Namespace, log\n| filter log like /(?i)(error|exception|fatal|critical)/\n| sort @timestamp desc\n| limit 50",
         "queryBy": "logGroupPrefix",
         "logGroupPrefixes": {
-          "accountIds": ["All"],
-          "logGroupPrefix": ["/aws/containerinsights/"],
+          "accountIds": [
+            "All"
+          ],
+          "logGroupPrefix": [
+            "/aws/containerinsights/"
+          ],
           "logClass": "STANDARD"
         },
         "region": "us-east-1",
@@ -2217,8 +2188,12 @@
         "query": "SOURCE logGroups(namePrefix: [\"/aws/containerinsights/\"], class: \"STANDARD\")  |\nfields kubernetes.container_name as Container, log\n| filter not isblank(log)\n| sort @timestamp desc\n| limit 100",
         "queryBy": "logGroupPrefix",
         "logGroupPrefixes": {
-          "accountIds": ["All"],
-          "logGroupPrefix": ["/aws/containerinsights/"],
+          "accountIds": [
+            "All"
+          ],
+          "logGroupPrefix": [
+            "/aws/containerinsights/"
+          ],
           "logClass": "STANDARD"
         },
         "region": "us-east-1",
@@ -2237,25 +2212,18 @@
         "query": "SOURCE logGroups(namePrefix: [\"/aws/ecs/\"], class: \"STANDARD\")  |\nfields @entity.KeyAttributes.Name as Service, @message\n| sort @timestamp desc\n| filter @log not like /containerinsights/\n| limit 100",
         "queryBy": "logGroupPrefix",
         "logGroupPrefixes": {
-          "accountIds": ["All"],
-          "logGroupPrefix": ["/aws/ecs/"],
+          "accountIds": [
+            "All"
+          ],
+          "logGroupPrefix": [
+            "/aws/ecs/"
+          ],
           "logClass": "STANDARD"
         },
         "region": "us-east-1",
         "stacked": false,
         "title": "[ECS] Recent Container Logs (Last 100)",
         "view": "table"
-      }
-    },
-    {
-      "type": "text",
-      "x": 0,
-      "y": 95,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## 💾 Database & Storage Metrics",
-        "background": "transparent"
       }
     },
     {
@@ -3215,17 +3183,6 @@
       }
     },
     {
-      "type": "text",
-      "x": 0,
-      "y": 138,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## 📨 Messaging, Streaming & Additional Data Stores",
-        "background": "transparent"
-      }
-    },
-    {
       "type": "metric",
       "x": 0,
       "y": 139,
@@ -3501,17 +3458,6 @@
       }
     },
     {
-      "type": "text",
-      "x": 0,
-      "y": 151,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## 🖥️ Compute & Auto Scaling",
-        "background": "transparent"
-      }
-    },
-    {
       "type": "metric",
       "x": 0,
       "y": 152,
@@ -3707,17 +3653,6 @@
       }
     },
     {
-      "type": "text",
-      "x": 0,
-      "y": 158,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## 📋 Application Logs & Insights",
-        "background": "transparent"
-      }
-    },
-    {
       "type": "log",
       "x": 0,
       "y": 159,
@@ -3727,8 +3662,12 @@
         "query": "SOURCE logGroups(namePrefix: [\"/aws/lambda/\"], class: \"STANDARD\")  |\nfields @timestamp, @message\n| filter @message like /(?i)(error|exception|timeout|out of memory)/\n| sort @timestamp desc\n| limit 100",
         "queryBy": "logGroupPrefix",
         "logGroupPrefixes": {
-          "accountIds": ["All"],
-          "logGroupPrefix": ["/aws/lambda/"],
+          "accountIds": [
+            "All"
+          ],
+          "logGroupPrefix": [
+            "/aws/lambda/"
+          ],
           "logClass": "STANDARD"
         },
         "region": "us-east-1",
@@ -3747,36 +3686,18 @@
         "query": "SOURCE logGroups(namePrefix: [\"/aws/ecs/\"], class: \"STANDARD\")  |\nfields @timestamp, @entity.KeyAttributes.Name as Service, @message\n| filter @message like /(?i)(error|exception|fatal|critical)/\n| filter @log not like /containerinsights/\n| sort @timestamp desc\n| limit 50",
         "queryBy": "logGroupPrefix",
         "logGroupPrefixes": {
-          "accountIds": ["All"],
-          "logGroupPrefix": ["/aws/ecs/"],
+          "accountIds": [
+            "All"
+          ],
+          "logGroupPrefix": [
+            "/aws/ecs/"
+          ],
           "logClass": "STANDARD"
         },
         "region": "us-east-1",
         "stacked": false,
         "title": "[ECS] Error Logs (Last 50)",
         "view": "table"
-      }
-    },
-    {
-      "type": "text",
-      "x": 0,
-      "y": 32,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## ☁️ CloudFront & VPC Lattice",
-        "background": "transparent"
-      }
-    },
-    {
-      "type": "text",
-      "x": 0,
-      "y": 19,
-      "width": 24,
-      "height": 1,
-      "properties": {
-        "markdown": "## Application Logs\n",
-        "background": "transparent"
       }
     }
   ]
