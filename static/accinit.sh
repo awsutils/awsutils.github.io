@@ -43,36 +43,11 @@ Environment variables:
   ENABLE_ACCESS_ANALYZER=true|false
   ENABLE_DETECTIVE=true|false
   LOG_BUCKET_NAME=my-dedicated-bucket
-  RETRY_MAX=3
 EOF
 }
 
 is_true() {
     [[ "${1:-false}" =~ ^([Tt][Rr][Uu][Ee]|1|[Yy][Ee][Ss])$ ]]
-}
-
-retry() {
-    local n=0
-    local output
-
-    while true; do
-        if output=$("$@" 2>&1); then
-            return 0
-        fi
-
-        printf '%s\n' "$output" >&2
-
-        if [[ "$output" == *"AccessDenied"* || "$output" == *"AccessDeniedException"* || "$output" == *"explicit deny"* || "$output" == *"InvalidRole"* || "$output" == *"NoSuchEntity"* || "$output" == *"NoAvailableConfigurationRecorderException"* || "$output" == *"NoSuchConfigurationRecorderException"* || "$output" == *"Parameter validation failed"* ]]; then
-            return 1
-        fi
-
-        n=$((n + 1))
-        if [[ $n -ge $RETRY_MAX ]]; then
-            return 1
-        fi
-        warn "retrying ($n/$((RETRY_MAX - 1))): $*"
-        sleep $((2 ** n))
-    done
 }
 
 apply() {
@@ -83,7 +58,7 @@ apply() {
         return 0
     fi
 
-    retry "$@"
+    "$@"
 }
 
 run_nonfatal() {
@@ -410,7 +385,7 @@ ensure_guardduty_region() {
             info "dry-run: would create GuardDuty detector in $region"
             detector_id="DRYRUN"
         else
-            detector_id=$(retry aws_region "$region" guardduty create-detector \
+            detector_id=$(apply aws_region "$region" guardduty create-detector \
                 --enable \
                 --finding-publishing-frequency "$GUARDDUTY_FINDING_FREQUENCY" \
                 --query 'DetectorId' --output text) || return 1
@@ -549,8 +524,6 @@ ENABLE_GUARDDUTY_RUNTIME_MONITORING="${ENABLE_GUARDDUTY_RUNTIME_MONITORING:-true
 ENABLE_INSPECTOR="${ENABLE_INSPECTOR:-true}"
 ENABLE_ACCESS_ANALYZER="${ENABLE_ACCESS_ANALYZER:-true}"
 ENABLE_DETECTIVE="${ENABLE_DETECTIVE:-true}"
-RETRY_MAX="${RETRY_MAX:-3}"
-
 HOME_REGION="us-east-1"
 TRAIL_NAME="${TRAIL_NAME:-awsutils-account-baseline}"
 LOG_PREFIX="${LOG_PREFIX:-account-baseline}"
