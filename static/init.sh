@@ -2,14 +2,18 @@
 # ── Configurable defaults (override: VAR=value curl ... | sh -) ────────────
 # When piped via "curl URL | sh -", detect the URL from the parent shell's cmdline
 _detect_script_url() {
-    local cmd url
-    cmd=$(tr '\0' ' ' < "/proc/${PPID}/cmdline" 2>/dev/null) || return 1
-    url=$(printf '%s' "$cmd" | grep -oE 'https?://[^[:space:]]+\.sh' | head -1)
-    if [ -z "$url" ]; then
-        url=$(printf '%s' "$cmd" | grep -oE '[a-zA-Z0-9][^[:space:]]*\.sh' | head -1)
-        [ -n "$url" ] && url="https://${url}"
-    fi
-    printf '%s' "$url"
+    local f cmd url
+    # curl is a pipeline sibling (not the parent), so scan all processes
+    for f in /proc/[0-9]*/cmdline; do
+        cmd=$(tr '\0' ' ' < "$f" 2>/dev/null) || continue
+        case "$cmd" in *curl*) ;; *) continue ;; esac
+        url=$(printf '%s' "$cmd" | grep -oE 'https?://[^[:space:]]+\.sh' | head -1)
+        if [ -z "$url" ]; then
+            url=$(printf '%s' "$cmd" | grep -oE '[a-zA-Z0-9][^[:space:]]*\.sh' | head -1)
+            [ -n "$url" ] && url="https://${url}"
+        fi
+        [ -n "$url" ] && { printf '%s' "$url"; return; }
+    done
 }
 SCRIPT_URL="${SCRIPT_URL:-$(_detect_script_url)}"
 SCRIPT_BASE_URL="$(printf '%s' "$SCRIPT_URL" | grep -oE 'https?://[^/]+')"
