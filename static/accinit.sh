@@ -53,7 +53,19 @@ is_true() {
 
 retry() {
     local n=0
-    until "$@"; do
+    local output
+
+    while true; do
+        if output=$("$@" 2>&1); then
+            return 0
+        fi
+
+        printf '%s\n' "$output" >&2
+
+        if [[ "$output" == *"AccessDenied"* || "$output" == *"AccessDeniedException"* || "$output" == *"explicit deny"* || "$output" == *"InvalidRole"* || "$output" == *"NoSuchEntity"* || "$output" == *"NoAvailableConfigurationRecorderException"* || "$output" == *"NoSuchConfigurationRecorderException"* || "$output" == *"Parameter validation failed"* ]]; then
+            return 1
+        fi
+
         n=$((n + 1))
         if [[ $n -ge $RETRY_MAX ]]; then
             return 1
@@ -127,20 +139,20 @@ ensure_log_bucket() {
         info "using existing log bucket $LOG_BUCKET_NAME"
     else
         info "creating log bucket $LOG_BUCKET_NAME"
-        apply aws_home s3api create-bucket --bucket "$LOG_BUCKET_NAME" >/dev/null
+        apply aws_home s3api create-bucket --bucket "$LOG_BUCKET_NAME" >/dev/null || return 1
     fi
 
     apply aws_home s3api put-public-access-block \
         --bucket "$LOG_BUCKET_NAME" \
-        --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true >/dev/null
+        --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true >/dev/null || return 1
 
     apply aws_home s3api put-bucket-versioning \
         --bucket "$LOG_BUCKET_NAME" \
-        --versioning-configuration Status=Enabled >/dev/null
+        --versioning-configuration Status=Enabled >/dev/null || return 1
 
     apply aws_home s3api put-bucket-encryption \
         --bucket "$LOG_BUCKET_NAME" \
-        --server-side-encryption-configuration "$encryption_config" >/dev/null
+        --server-side-encryption-configuration "$encryption_config" >/dev/null || return 1
 
     cat > "$TMP_DIR/log-bucket-policy.json" <<EOF
 {
@@ -207,7 +219,7 @@ EOF
 
     apply aws_home s3api put-bucket-policy \
         --bucket "$LOG_BUCKET_NAME" \
-        --policy "file://$TMP_DIR/log-bucket-policy.json" >/dev/null
+        --policy "file://$TMP_DIR/log-bucket-policy.json" >/dev/null || return 1
 
     info "configured log bucket $LOG_BUCKET_NAME"
 }
@@ -234,8 +246,8 @@ ensure_cloudtrail() {
             --s3-key-prefix "$LOG_PREFIX/cloudtrail" \
             --is-multi-region-trail \
             --include-global-service-events \
-            --enable-log-file-validation >/dev/null
-        apply aws_region "$named_trail_home_region" cloudtrail start-logging --name "$TRAIL_NAME" >/dev/null
+            --enable-log-file-validation >/dev/null || return 1
+        apply aws_region "$named_trail_home_region" cloudtrail start-logging --name "$TRAIL_NAME" >/dev/null || return 1
         info "updated and started CloudTrail trail $TRAIL_NAME"
         return 0
     fi
@@ -255,9 +267,9 @@ ensure_cloudtrail() {
         --s3-key-prefix "$LOG_PREFIX/cloudtrail" \
         --is-multi-region-trail \
         --include-global-service-events \
-        --enable-log-file-validation >/dev/null
+        --enable-log-file-validation >/dev/null || return 1
 
-    apply aws_home cloudtrail start-logging --name "$TRAIL_NAME" >/dev/null
+    apply aws_home cloudtrail start-logging --name "$TRAIL_NAME" >/dev/null || return 1
     info "created and started CloudTrail trail $TRAIL_NAME"
 }
 
@@ -287,22 +299,24 @@ EOF
 
         apply aws_home iam create-role \
             --role-name "$CONFIG_ROLE_NAME" \
-            --assume-role-policy-document "file://$TMP_DIR/config-role-trust.json" >/dev/null
+            --assume-role-policy-document "file://$TMP_DIR/config-role-trust.json" >/dev/null || return 1
 
         if [[ "$DRY_RUN" != true ]]; then
             sleep 10
         fi
 
-        CONFIG_ROLE_ARN="arn:${PARTITION}:iam::${ACCOUNT_ID}:role/${CONFIG_ROLE_NAME}"
+        CONFIG_ROLE_ARN=$(aws_home iam get-role --role-name "$CONFIG_ROLE_NAME" --query 'Role.Arn' --output text 2>/dev/null || true)
+        [[ -n "$CONFIG_ROLE_ARN" && "$CONFIG_ROLE_ARN" != "None" ]] || return 1
         info "created Config role $CONFIG_ROLE_NAME"
     fi
 
     apply aws_home iam attach-role-policy \
         --role-name "$CONFIG_ROLE_NAME" \
-        --policy-arn "arn:${PARTITION}:iam::aws:policy/service-role/AWS_ConfigRole" >/dev/null
+        --policy-arn "arn:${PARTITION}:iam::aws:policy/service-role/AWS_ConfigRole" >/dev/null || return 1
 
     if [[ "$DRY_RUN" != true ]]; then
-        CONFIG_ROLE_ARN=$(aws_home iam get-role --role-name "$CONFIG_ROLE_NAME" --query 'Role.Arn' --output text)
+        CONFIG_ROLE_ARN=$(aws_home iam get-role --role-name "$CONFIG_ROLE_NAME" --query 'Role.Arn' --output text 2>/dev/null || true)
+        [[ -n "$CONFIG_ROLE_ARN" && "$CONFIG_ROLE_ARN" != "None" ]] || return 1
     fi
 
     info "attached AWS managed Config policy to $CONFIG_ROLE_NAME"
@@ -322,17 +336,20 @@ ensure_config_region() {
     if [[ -z "$delivery_channel_name" || "$delivery_channel_name" == "None" ]]; then
         apply aws_region "$region" configservice put-delivery-channel \
             --delivery-channel "name=${DEFAULT_DELIVERY_CHANNEL_NAME},s3BucketName=${LOG_BUCKET_NAME},s3KeyPrefix=${LOG_PREFIX}/config,configSnapshotDeliveryProperties={deliveryFrequency=${CONFIG_SNAPSHOT_FREQUENCY}}" >/dev/null
-        delivery_channel_name="$DEFAULT_DELIVERY_CHANNEL_NAME"
+        delivery_channel_name=$(aws_region "$region" configservice describe-delivery-channels --query 'DeliveryChannels[0].name' --output text 2>/dev/null || true)
+        [[ -n "$delivery_channel_name" && "$delivery_channel_name" != "None" ]] || return 1
         info "created AWS Config delivery channel in $region"
     else
         info "AWS Config delivery channel already exists in $region: $delivery_channel_name"
     fi
 
     if [[ -z "$recorder_name" || "$recorder_name" == "None" ]]; then
+        [[ -n "$CONFIG_ROLE_ARN" && "$CONFIG_ROLE_ARN" != "None" ]] || return 1
         apply aws_region "$region" configservice put-configuration-recorder \
             --configuration-recorder "name=${DEFAULT_RECORDER_NAME},roleARN=${CONFIG_ROLE_ARN}" \
-            --recording-group allSupported=true,includeGlobalResourceTypes=false >/dev/null
-        recorder_name="$DEFAULT_RECORDER_NAME"
+            --recording-group allSupported=true,includeGlobalResourceTypes=false >/dev/null || return 1
+        recorder_name=$(aws_region "$region" configservice describe-configuration-recorders --query 'ConfigurationRecorders[0].name' --output text 2>/dev/null || true)
+        [[ -n "$recorder_name" && "$recorder_name" != "None" ]] || return 1
         info "created AWS Config recorder in $region"
     else
         info "AWS Config recorder already exists in $region: $recorder_name"
@@ -347,7 +364,7 @@ ensure_config_region() {
     fi
 
     apply aws_region "$region" configservice start-configuration-recorder \
-        --configuration-recorder-name "$recorder_name" >/dev/null
+        --configuration-recorder-name "$recorder_name" >/dev/null || return 1
     info "started AWS Config recorder in $region"
 }
 
@@ -361,7 +378,7 @@ ensure_security_hub_region() {
 
     apply aws_region "$region" securityhub enable-security-hub \
         --enable-default-standards \
-        --control-finding-generator SECURITY_CONTROL >/dev/null
+        --control-finding-generator SECURITY_CONTROL >/dev/null || return 1
     info "enabled Security Hub in $region"
 }
 
@@ -378,7 +395,7 @@ ensure_security_hub_aggregation() {
     fi
 
     apply aws_home securityhub create-finding-aggregator \
-        --region-linking-mode ALL_REGIONS >/dev/null
+        --region-linking-mode ALL_REGIONS >/dev/null || return 1
     info "enabled Security Hub finding aggregation in $HOME_REGION"
 }
 
@@ -396,14 +413,15 @@ ensure_guardduty_region() {
             detector_id=$(retry aws_region "$region" guardduty create-detector \
                 --enable \
                 --finding-publishing-frequency "$GUARDDUTY_FINDING_FREQUENCY" \
-                --query 'DetectorId' --output text)
+                --query 'DetectorId' --output text) || return 1
+            [[ -n "$detector_id" && "$detector_id" != "None" ]] || return 1
             info "enabled GuardDuty in $region"
         fi
     else
         apply aws_region "$region" guardduty update-detector \
             --detector-id "$detector_id" \
             --enable \
-            --finding-publishing-frequency "$GUARDDUTY_FINDING_FREQUENCY" >/dev/null
+            --finding-publishing-frequency "$GUARDDUTY_FINDING_FREQUENCY" >/dev/null || return 1
         info "updated GuardDuty detector in $region"
     fi
 
@@ -418,7 +436,7 @@ ensure_guardduty_region() {
 
     apply aws_region "$region" guardduty update-detector \
         --detector-id "$detector_id" \
-        --features 'Name=RUNTIME_MONITORING,Status=ENABLED,AdditionalConfiguration=[{Name=EC2_AGENT_MANAGEMENT,Status=ENABLED},{Name=ECS_FARGATE_AGENT_MANAGEMENT,Status=ENABLED},{Name=EKS_ADDON_MANAGEMENT,Status=ENABLED}]' >/dev/null
+        --features 'Name=RUNTIME_MONITORING,Status=ENABLED,AdditionalConfiguration=[{Name=EC2_AGENT_MANAGEMENT,Status=ENABLED},{Name=ECS_FARGATE_AGENT_MANAGEMENT,Status=ENABLED},{Name=EKS_ADDON_MANAGEMENT,Status=ENABLED}]' >/dev/null || return 1
     info "enabled GuardDuty runtime monitoring in $region"
 }
 
@@ -464,7 +482,7 @@ ensure_access_analyzer_region() {
 
     apply aws_region "$region" accessanalyzer create-analyzer \
         --analyzer-name "$ACCOUNT_ANALYZER_NAME" \
-        --type ACCOUNT >/dev/null
+        --type ACCOUNT >/dev/null || return 1
     info "created account-level Access Analyzer in $region"
 }
 
@@ -480,7 +498,7 @@ ensure_ebs_encryption_region() {
         return 0
     fi
 
-    apply aws_region "$region" ec2 enable-ebs-encryption-by-default >/dev/null
+    apply aws_region "$region" ec2 enable-ebs-encryption-by-default >/dev/null || return 1
     info "enabled EBS encryption by default in $region"
 }
 
@@ -494,7 +512,7 @@ ensure_detective() {
         return 0
     fi
 
-    apply aws_home detective create-graph >/dev/null
+    apply aws_home detective create-graph >/dev/null || return 1
     info "enabled Detective in $HOME_REGION"
 }
 
