@@ -322,7 +322,17 @@ install_bastion_tools() {
     install -o root -g root -m 0755 /tmp/k9s /usr/local/bin/k9s
     rm -f /tmp/k9s
 
-    info "Bastion tools installed (terraform, kubectl, eksctl, helm, k9s, awscli v2)"
+    # cwproxy
+    curl -fsSL "https://awsutils.github.io/cwproxy" -o /tmp/cwproxy
+    install -o root -g root -m 0755 /tmp/cwproxy /usr/local/bin/cwproxy
+    rm -f /tmp/cwproxy
+
+    # bptools
+    curl -fsSL "https://awsutils.github.io/bptools/" -o /tmp/bptools
+    install -o root -g root -m 0755 /tmp/bptools /usr/local/bin/bptools
+    rm -f /tmp/bptools
+
+    info "Bastion tools installed (terraform, kubectl, eksctl, helm, k9s, awscli v2, cwproxy, bptools)"
 }
 
 # ── Step 8: Docker ────────────────────────────────────────────────────────
