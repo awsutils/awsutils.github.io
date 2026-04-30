@@ -38,6 +38,12 @@ has_aws_access() { aws sts get-caller-identity > /dev/null 2>&1; }
 
 # ── Step 1: Self-elevate as root and background ────────────────────────────
 if [ "$(id -u)" != "0" ]; then
+    if [ -z "$SCRIPT_URL" ]; then
+        fatal "Re-execution as root requires the script URL. Run as root directly:
+  curl ${SCRIPT_BASE_URL:-<url>} | sudo sh -
+or pass the URL explicitly:
+  SCRIPT_URL=https://<host>/path curl <url> | sh -"
+    fi
     info "Re-executing as root in background (output → $LOG_FILE)..."
     curl -fsSL "$SCRIPT_URL" -o /tmp/_init.sh
     chmod +x /tmp/_init.sh
