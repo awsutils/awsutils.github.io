@@ -377,7 +377,6 @@ install_ecr_command() {
 #!/bin/bash
 # ecr <repository_name> [tag]
 # Login to ECR, build Dockerfile in current directory, and push.
-set -e
 REPO=${1:?Usage: ecr <repository_name> [tag]}
 TAG=${2:-latest}
 REGION=$(aws configure get region 2>/dev/null || echo "${AWS_DEFAULT_REGION:-us-east-1}")
@@ -386,11 +385,39 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/nu
 }
 REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
-aws ecr create-repository --repository-name "$REPO" --region "$REGION" 2>/dev/null || true
-aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
-docker build -t "${REGISTRY}/${REPO}:${TAG}" .
-docker push "${REGISTRY}/${REPO}:${TAG}"
-printf 'Pushed: %s/%s:%s\n' "$REGISTRY" "$REPO" "$TAG"
+info() { printf '[INFO] %s\n' "$*"; }
+warn() { printf '[WARN] %s\n' "$*" >&2; }
+
+if aws ecr create-repository --repository-name "$REPO" --region "$REGION" >/dev/null 2>&1; then
+    info "Created ECR repository: $REPO"
+else
+    warn "Could not create ECR repository: $REPO (it may already exist, or you may not have permission)"
+fi
+
+LOGIN_READY=true
+if aws ecr get-login-password --region "$REGION" 2>/dev/null | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null 2>&1; then
+    info "Authenticated to $REGISTRY"
+else
+    warn "Could not authenticate to ECR; will still attempt local image build"
+    LOGIN_READY=false
+fi
+
+if docker build -t "${REGISTRY}/${REPO}:${TAG}" .; then
+    info "Built image: ${REGISTRY}/${REPO}:${TAG}"
+else
+    printf '[ERROR] Docker build failed\n' >&2
+    exit 1
+fi
+
+if [ "$LOGIN_READY" = true ]; then
+    if docker push "${REGISTRY}/${REPO}:${TAG}"; then
+        printf 'Pushed: %s/%s:%s\n' "$REGISTRY" "$REPO" "$TAG"
+    else
+        warn "Docker push failed for ${REGISTRY}/${REPO}:${TAG}"
+    fi
+else
+    warn "Skipping push because ECR authentication was not available"
+fi
 EOF
     chmod +x /usr/local/bin/ecr
     info "Installed: ecr"
@@ -400,7 +427,15 @@ install_accbp_command() {
     cat > /usr/local/bin/accbp << 'EOF'
 #!/bin/bash
 # Enable AWS security baseline: Config, GuardDuty, SecurityHub, CloudTrail, etc.
-exec curl -fsSL __BASE_URL__/accinit.sh | bash -s -- "$@"
+TMP_ACCINIT=$(mktemp)
+trap 'rm -f "$TMP_ACCINIT"' EXIT
+
+if ! curl -fsSL __BASE_URL__/accinit.sh -o "$TMP_ACCINIT"; then
+    printf '[ERROR] Could not download accinit.sh\n' >&2
+    exit 1
+fi
+
+bash "$TMP_ACCINIT" "$@"
 EOF
     sed -i "s|__BASE_URL__|${SCRIPT_BASE_URL}|g" /usr/local/bin/accbp
     chmod +x /usr/local/bin/accbp
@@ -413,7 +448,6 @@ install_dash_command() {
 # dash [full|simple|all]
 # Download and create CloudWatch dashboards.
 # Defaults to creating both (full and simple).
-set -e
 
 BASE_URL="__BASE_URL__"
 TMPDIR_DASH=$(mktemp -d)
@@ -425,7 +459,10 @@ create_dashboard() {
     local name="$1" file="$2"
     local url="${BASE_URL}/${file}"
     local dest="${TMPDIR_DASH}/${file}"
-    curl -fsSL "$url" -o "$dest"
+    if ! curl -fsSL "$url" -o "$dest"; then
+        printf '[WARN] Could not download dashboard definition: %s; skipping\n' "$file" >&2
+        return 0
+    fi
     if aws cloudwatch put-dashboard --dashboard-name "$name" --dashboard-body "file://${dest}" 2>/dev/null; then
         printf 'Created dashboard: %s\n' "$name"
     else
@@ -453,10 +490,10 @@ install_vpc_command() {
 # Enable common VPC endpoints and flow logs for every VPC in this region.
 # Usage: vpc
 # Override: CW_RETENTION=<days> vpc
-set -e
 
 export AWS_PAGER=""
-REGION=$(aws ec2 describe-availability-zones --query 'AvailabilityZones[0].RegionName' --output text 2>/dev/null) || {
+REGION=$(aws ec2 describe-availability-zones --query 'AvailabilityZones[0].RegionName' --output text 2>/dev/null || aws configure get region 2>/dev/null || echo "${AWS_DEFAULT_REGION:-}")
+[ -z "$REGION" ] && {
     printf '[ERROR] No AWS API access\n' >&2; exit 1
 }
 CW_RETENTION="${CW_RETENTION:-7}"
@@ -492,19 +529,29 @@ ensure_flowlog_role() {
         return 0
     fi
 
-    aws iam create-role \
+    if ! aws iam create-role \
         --role-name "$role_name" \
         --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"vpc-flow-logs.amazonaws.com"},"Action":"sts:AssumeRole"}]}' \
-        > /dev/null
+        > /dev/null 2>&1; then
+        warn "Could not create flow log IAM role: $role_name"
+        return 1
+    fi
 
-    aws iam put-role-policy \
+    if ! aws iam put-role-policy \
         --role-name "$role_name" \
         --policy-name "vpc-flowlog-policy" \
         --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents","logs:DescribeLogGroups","logs:DescribeLogStreams"],"Resource":"*"}]}' \
-        > /dev/null
+        > /dev/null 2>&1; then
+        warn "Could not attach flow log policy to IAM role: $role_name"
+        return 1
+    fi
 
     sleep 10  # IAM propagation
-    FLOWLOG_ROLE_ARN=$(aws iam get-role --role-name "$role_name" --query 'Role.Arn' --output text)
+    FLOWLOG_ROLE_ARN=$(aws iam get-role --role-name "$role_name" --query 'Role.Arn' --output text 2>/dev/null || true)
+    if [ -z "$FLOWLOG_ROLE_ARN" ] || [ "$FLOWLOG_ROLE_ARN" = "None" ]; then
+        warn "Could not resolve flow log IAM role ARN: $role_name"
+        return 1
+    fi
     info "Created flow log IAM role: $role_name"
 }
 
@@ -515,7 +562,11 @@ setup_vpc() {
     vpc_name=$(aws ec2 describe-vpcs --vpc-ids "$vpc_id" \
         --query 'Vpcs[0].Tags[?Key==`Name`].Value | [0]' --output text 2>/dev/null || true)
     [ -z "$vpc_name" ] || [ "$vpc_name" = "None" ] && vpc_name="$vpc_id"
-    vpc_cidr=$(aws ec2 describe-vpcs --vpc-ids "$vpc_id" --query 'Vpcs[0].CidrBlock' --output text)
+    vpc_cidr=$(aws ec2 describe-vpcs --vpc-ids "$vpc_id" --query 'Vpcs[0].CidrBlock' --output text 2>/dev/null || true)
+    if [ -z "$vpc_cidr" ] || [ "$vpc_cidr" = "None" ]; then
+        warn "$vpc_id: could not read VPC CIDR; skipping"
+        return 0
+    fi
 
     info "--- $vpc_id ($vpc_name) ---"
 
@@ -523,13 +574,21 @@ setup_vpc() {
     local all_rt_ids
     all_rt_ids=$(aws ec2 describe-route-tables \
         --filters "Name=vpc-id,Values=$vpc_id" \
-        --query 'RouteTables[*].RouteTableId' --output text)
+        --query 'RouteTables[*].RouteTableId' --output text 2>/dev/null || true)
+    if [ -z "$all_rt_ids" ] || [ "$all_rt_ids" = "None" ]; then
+        warn "$vpc_id: could not list route tables; skipping"
+        return 0
+    fi
 
     # Private subnets: no IGW route on their effective route table
     local all_subnets private_subnet_ids=""
     all_subnets=$(aws ec2 describe-subnets \
         --filters "Name=vpc-id,Values=$vpc_id" \
-        --query 'Subnets[*].SubnetId' --output text)
+        --query 'Subnets[*].SubnetId' --output text 2>/dev/null || true)
+    if [ -z "$all_subnets" ] || [ "$all_subnets" = "None" ]; then
+        warn "$vpc_id: could not list subnets; skipping"
+        return 0
+    fi
 
     local main_rt_id
     main_rt_id=$(aws ec2 describe-route-tables \
@@ -554,7 +613,7 @@ setup_vpc() {
     local existing
     existing=$(aws ec2 describe-vpc-endpoints \
         --filters "Name=vpc-id,Values=$vpc_id" \
-        --query 'VpcEndpoints[?State!=`deleted`].ServiceName' --output text)
+        --query 'VpcEndpoints[?State!=`deleted`].ServiceName' --output text 2>/dev/null || true)
 
     # Security group for interface endpoints
     local sg_name="${vpc_name}-vpce-sg" sg_id
@@ -568,10 +627,18 @@ setup_vpc() {
             --description "VPC Endpoints" \
             --vpc-id "$vpc_id" \
             --tag-specifications "ResourceType=security-group,Tags=[{Key=Name,Value=${sg_name}}]" \
-            --query 'GroupId' --output text)
-        aws ec2 authorize-security-group-ingress \
-            --group-id "$sg_id" --protocol -1 --cidr "$vpc_cidr" > /dev/null
-        info "Created SG: $sg_id"
+            --query 'GroupId' --output text 2>/dev/null || true)
+        if [ -n "$sg_id" ] && [ "$sg_id" != "None" ]; then
+            if aws ec2 authorize-security-group-ingress \
+                --group-id "$sg_id" --protocol -1 --cidr "$vpc_cidr" > /dev/null 2>&1; then
+                info "Created SG: $sg_id"
+            else
+                warn "$vpc_id: created security group $sg_id but could not add ingress rule"
+                sg_id=""
+            fi
+        else
+            warn "$vpc_id: could not create security group for interface endpoints"
+        fi
     fi
 
     # Gateway endpoints (attach to all route tables)
@@ -581,19 +648,24 @@ setup_vpc() {
             info "$short: already exists"
             continue
         fi
-        aws ec2 create-vpc-endpoint \
+        if aws ec2 create-vpc-endpoint \
             --vpc-id "$vpc_id" \
             --service-name "$svc" \
             --vpc-endpoint-type Gateway \
             --route-table-ids $all_rt_ids \
             --tag-specifications "ResourceType=vpc-endpoint,Tags=[{Key=Name,Value=${vpc_name}-vpce-${short}}]" \
-            --query 'VpcEndpoint.VpcEndpointId' --output text > /dev/null
-        info "Created gateway endpoint: $short"
+            --query 'VpcEndpoint.VpcEndpointId' --output text > /dev/null 2>&1; then
+            info "Created gateway endpoint: $short"
+        else
+            warn "Failed to create gateway endpoint: $short"
+        fi
     done
 
     # Interface endpoints (private subnets only)
     if [ -z "$private_subnet_ids" ]; then
         warn "$vpc_id: no private subnets; skipping interface endpoints"
+    elif [ -z "$sg_id" ]; then
+        warn "$vpc_id: no security group available; skipping interface endpoints"
     else
         for svc in "${INTERFACE_SERVICES[@]}"; do
             local short="${svc##*.}"
@@ -625,23 +697,30 @@ setup_vpc() {
     if [ -n "$existing_flowlog" ] && [ "$existing_flowlog" != "None" ]; then
         info "Flow logs already enabled for $vpc_id"
     else
+        if [ -z "$FLOWLOG_ROLE_ARN" ]; then
+            warn "$vpc_id: no flow log IAM role available; skipping flow logs"
+            return 0
+        fi
         aws logs create-log-group --log-group-name "$log_group" 2>/dev/null || true
         aws logs put-retention-policy --log-group-name "$log_group" --retention-in-days "$CW_RETENTION" 2>/dev/null || true
-        aws ec2 create-flow-logs \
+        if aws ec2 create-flow-logs \
             --resource-ids "$vpc_id" \
             --resource-type VPC \
             --traffic-type ALL \
             --log-destination-type cloud-watch-logs \
             --log-group-name "$log_group" \
-            --deliver-logs-permission-arn "$FLOWLOG_ROLE_ARN" > /dev/null
-        info "Flow logs → $log_group (${CW_RETENTION}d retention)"
+            --deliver-logs-permission-arn "$FLOWLOG_ROLE_ARN" > /dev/null 2>&1; then
+            info "Flow logs → $log_group (${CW_RETENTION}d retention)"
+        else
+            warn "$vpc_id: failed to enable flow logs"
+        fi
     fi
 }
 
-ensure_flowlog_role
+ensure_flowlog_role || warn "Flow log IAM role setup failed; flow logs will be skipped"
 
-VPC_IDS=$(aws ec2 describe-vpcs --query 'Vpcs[*].VpcId' --output text)
-[ -z "$VPC_IDS" ] && { warn "No VPCs found"; exit 0; }
+VPC_IDS=$(aws ec2 describe-vpcs --query 'Vpcs[*].VpcId' --output text 2>/dev/null || true)
+[ -z "$VPC_IDS" ] || [ "$VPC_IDS" = "None" ] && { warn "No VPCs found or access denied"; exit 0; }
 
 for vpc_id in $VPC_IDS; do
     setup_vpc "$vpc_id"
@@ -663,8 +742,8 @@ install_takeshot_command() {
 
 export AWS_PAGER=""
 REGION="${REGION:-$(aws ec2 describe-availability-zones \
-    --query 'AvailabilityZones[0].RegionName' --output text 2>/dev/null)}"
-[ -z "$REGION" ] && { printf '[ERROR] No AWS API access\n' >&2; exit 1; }
+    --query 'AvailabilityZones[0].RegionName' --output text 2>/dev/null || aws configure get region 2>/dev/null || echo "${AWS_DEFAULT_REGION:-}")}"
+[ -z "$REGION" ] && { printf '[ERROR] Could not determine AWS region\n' >&2; exit 1; }
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 info() { printf '[INFO] %s\n' "$*"; }

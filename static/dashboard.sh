@@ -165,9 +165,12 @@ if [[ "$DRY_RUN" == true ]]; then
 fi
 
 info "Uploading dashboard $DASHBOARD_NAME to region $AWS_REGION_VALUE"
-aws --region "$AWS_REGION_VALUE" cloudwatch put-dashboard \
+if aws --region "$AWS_REGION_VALUE" cloudwatch put-dashboard \
     --dashboard-name "$DASHBOARD_NAME" \
-    --dashboard-body "file://$FINAL_JSON_FILE" >/dev/null
+    --dashboard-body "file://$FINAL_JSON_FILE" >/dev/null; then
+    info "Dashboard updated successfully"
+else
+    warn "Dashboard upload failed, likely due to missing CloudWatch permissions. Prepared JSON remains at $FINAL_JSON_FILE"
+fi
 
-info "Dashboard updated successfully"
 warn "Review namespace-driven EKS widgets in CloudWatch and select your namespace variable after import"

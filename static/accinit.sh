@@ -8,6 +8,11 @@ info()  { printf '%s\n' "$*"; }
 warn()  { printf 'warn: %s\n' "$*" >&2; }
 fatal() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
+record_warning() {
+    warn "$*"
+    WARNING_COUNT=$((WARNING_COUNT + 1))
+}
+
 show_help() {
     cat <<'EOF'
 Usage: accinit.sh [--dry-run] [--help]
@@ -77,8 +82,7 @@ run_nonfatal() {
         return 0
     fi
 
-    warn "$description"
-    WARNING_COUNT=$((WARNING_COUNT + 1))
+    record_warning "$description"
     return 0
 }
 
@@ -496,6 +500,7 @@ ensure_detective() {
 
 DRY_RUN=false
 WARNING_COUNT=0
+LOG_BUCKET_READY=false
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -555,18 +560,31 @@ if is_true "$ENABLE_S3_BLOCK_PUBLIC_ACCESS"; then
 fi
 
 if is_true "$ENABLE_CLOUDTRAIL" || is_true "$ENABLE_CONFIG"; then
-    ensure_log_bucket
+    if ensure_log_bucket; then
+        LOG_BUCKET_READY=true
+    else
+        record_warning "shared log bucket setup failed; skipping dependent CloudTrail and AWS Config steps"
+    fi
 fi
 
 if is_true "$ENABLE_CLOUDTRAIL"; then
-    ensure_cloudtrail
+    if [[ "$LOG_BUCKET_READY" == true ]]; then
+        run_nonfatal "CloudTrail setup failed in $HOME_REGION" ensure_cloudtrail
+    else
+        record_warning "CloudTrail skipped because the shared log bucket is not available"
+    fi
 fi
 
 if is_true "$ENABLE_CONFIG"; then
-    ensure_config_role
-    for region in "${REGIONS[@]}"; do
-        run_nonfatal "AWS Config setup failed in $region" ensure_config_region "$region"
-    done
+    if [[ "$LOG_BUCKET_READY" != true ]]; then
+        record_warning "AWS Config skipped because the shared log bucket is not available"
+    elif ensure_config_role; then
+        for region in "${REGIONS[@]}"; do
+            run_nonfatal "AWS Config setup failed in $region" ensure_config_region "$region"
+        done
+    else
+        record_warning "AWS Config role setup failed; skipping regional Config recorder setup"
+    fi
 fi
 
 if is_true "$ENABLE_EBS_ENCRYPTION"; then

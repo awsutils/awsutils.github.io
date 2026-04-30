@@ -220,12 +220,19 @@ else
     --description "VPC Endpoints - allow all from $VPC_CIDR" \
     --vpc-id "$VPC_ID" \
     --tag-specifications "ResourceType=security-group,Tags=[{Key=Name,Value=${SG_TAG_NAME}}]" \
-    --query 'GroupId' --output text)
+    --query 'GroupId' --output text 2>/dev/null || true)
 
-  aws ec2 authorize-security-group-ingress \
-    --group-id "$SG_ID" --protocol -1 --cidr "$VPC_CIDR" > /dev/null
-
-  log "Created Security Group: $SG_ID ($SG_TAG_NAME)"
+  if [[ -n "$SG_ID" && "$SG_ID" != "None" ]]; then
+    if aws ec2 authorize-security-group-ingress \
+      --group-id "$SG_ID" --protocol -1 --cidr "$VPC_CIDR" > /dev/null 2>&1; then
+      log "Created Security Group: $SG_ID ($SG_TAG_NAME)"
+    else
+      warn "Created $SG_ID but could not authorize ingress; interface endpoints will be skipped"
+      SG_ID=""
+    fi
+  else
+    warn "Could not create Security Group; interface endpoints will be skipped"
+  fi
 fi
 
 # --- Existing endpoints ---
@@ -282,6 +289,8 @@ echo ""
 log "=== Creating Interface Endpoints (private subnets) ==="
 if [[ -z "$PRIVATE_SUBNET_IDS" ]]; then
   warn "Skipping all interface endpoints — no private subnets"
+elif [[ -z "$SG_ID" ]]; then
+  warn "Skipping all interface endpoints — no usable security group"
 else
   for svc in "${SELECTED_IF_SERVICES[@]}"; do
     short="${svc##*.}"
@@ -351,10 +360,12 @@ rm -rf "${LOG_DIR}"
 # --- Summary ---
 echo ""
 echo -e "${CYAN}========== SUMMARY ==========${NC}"
-aws ec2 describe-vpc-endpoints \
+if ! aws ec2 describe-vpc-endpoints \
   --filters "Name=vpc-id,Values=$VPC_ID" \
   --query 'VpcEndpoints[?State!=`deleted`].{ID:VpcEndpointId,Service:ServiceName,Type:VpcEndpointType,State:State}' \
-  --output table
+  --output table; then
+  warn "Could not load endpoint summary"
+fi
 
 log "Done!"
 }
