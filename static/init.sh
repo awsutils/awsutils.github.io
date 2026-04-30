@@ -656,6 +656,184 @@ EOF
     info "Installed: vpc"
 }
 
+install_takeshot_command() {
+    cat > /usr/local/bin/takeshot << 'EOF'
+#!/bin/bash
+# takeshot [service...]
+# Create on-demand snapshots/backups for AWS data services.
+# Services: rds aurora elasticache memorydb dynamodb redshift docdb
+# Defaults to all services when no arguments are given.
+# Override region: REGION=us-west-2 takeshot
+
+export AWS_PAGER=""
+REGION="${REGION:-$(aws ec2 describe-availability-zones \
+    --query 'AvailabilityZones[0].RegionName' --output text 2>/dev/null)}"
+[ -z "$REGION" ] && { printf '[ERROR] No AWS API access\n' >&2; exit 1; }
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+info() { printf '[INFO] %s\n' "$*"; }
+warn() { printf '[WARN] %s\n' "$*" >&2; }
+
+# Truncate identifier to 200 chars then append timestamp (fits all service limits)
+snap_id() { local b="${1:0:200}"; printf '%s-%s' "$b" "$TIMESTAMP"; }
+
+snapshot_rds() {
+    info "--- RDS instances ---"
+    local ids
+    ids=$(aws rds describe-db-instances --region "$REGION" \
+        --query 'DBInstances[*].DBInstanceIdentifier' --output text 2>/dev/null) \
+        || { warn "Could not list RDS instances"; return; }
+    [ -z "$ids" ] || [ "$ids" = "None" ] && { info "No RDS instances found"; return; }
+    for id in $ids; do
+        local snap; snap=$(snap_id "$id")
+        aws rds create-db-snapshot \
+            --db-instance-identifier "$id" \
+            --db-snapshot-identifier "$snap" \
+            --region "$REGION" \
+            --query 'DBSnapshot.DBSnapshotIdentifier' --output text 2>/dev/null \
+            && info "RDS snapshot initiated: $snap" \
+            || warn "Skipped RDS instance (may be a cluster member): $id"
+    done
+}
+
+snapshot_aurora() {
+    info "--- Aurora / RDS clusters ---"
+    local ids
+    ids=$(aws rds describe-db-clusters --region "$REGION" \
+        --query 'DBClusters[?Engine!=`docdb`].DBClusterIdentifier' --output text 2>/dev/null) \
+        || { warn "Could not list RDS clusters"; return; }
+    [ -z "$ids" ] || [ "$ids" = "None" ] && { info "No Aurora/RDS clusters found"; return; }
+    for id in $ids; do
+        local snap; snap=$(snap_id "$id")
+        aws rds create-db-cluster-snapshot \
+            --db-cluster-identifier "$id" \
+            --db-cluster-snapshot-identifier "$snap" \
+            --region "$REGION" \
+            --query 'DBClusterSnapshot.DBClusterSnapshotIdentifier' --output text 2>/dev/null \
+            && info "Aurora cluster snapshot initiated: $snap" \
+            || warn "Failed to snapshot Aurora cluster: $id"
+    done
+}
+
+snapshot_docdb() {
+    info "--- DocumentDB clusters ---"
+    local ids
+    ids=$(aws docdb describe-db-clusters --region "$REGION" \
+        --query 'DBClusters[*].DBClusterIdentifier' --output text 2>/dev/null) \
+        || { warn "Could not list DocumentDB clusters"; return; }
+    [ -z "$ids" ] || [ "$ids" = "None" ] && { info "No DocumentDB clusters found"; return; }
+    for id in $ids; do
+        local snap; snap=$(snap_id "$id")
+        aws docdb create-db-cluster-snapshot \
+            --db-cluster-identifier "$id" \
+            --db-cluster-snapshot-identifier "$snap" \
+            --region "$REGION" \
+            --query 'DBClusterSnapshot.DBClusterSnapshotIdentifier' --output text 2>/dev/null \
+            && info "DocumentDB snapshot initiated: $snap" \
+            || warn "Failed to snapshot DocumentDB cluster: $id"
+    done
+}
+
+snapshot_elasticache() {
+    info "--- ElastiCache (Redis/Valkey replication groups) ---"
+    local ids
+    ids=$(aws elasticache describe-replication-groups --region "$REGION" \
+        --query 'ReplicationGroups[*].ReplicationGroupId' --output text 2>/dev/null) \
+        || { warn "Could not list ElastiCache replication groups"; return; }
+    [ -z "$ids" ] || [ "$ids" = "None" ] && { info "No ElastiCache replication groups found"; return; }
+    for id in $ids; do
+        local snap; snap=$(snap_id "$id")
+        aws elasticache create-snapshot \
+            --replication-group-id "$id" \
+            --snapshot-name "$snap" \
+            --region "$REGION" \
+            --query 'Snapshot.SnapshotName' --output text 2>/dev/null \
+            && info "ElastiCache snapshot initiated: $snap" \
+            || warn "Failed to snapshot ElastiCache group: $id"
+    done
+}
+
+snapshot_memorydb() {
+    info "--- MemoryDB clusters ---"
+    local names
+    names=$(aws memorydb describe-clusters --region "$REGION" \
+        --query 'Clusters[*].Name' --output text 2>/dev/null) \
+        || { warn "Could not list MemoryDB clusters"; return; }
+    [ -z "$names" ] || [ "$names" = "None" ] && { info "No MemoryDB clusters found"; return; }
+    for name in $names; do
+        local snap; snap=$(snap_id "$name")
+        aws memorydb create-snapshot \
+            --cluster-name "$name" \
+            --snapshot-name "$snap" \
+            --region "$REGION" \
+            --query 'Snapshot.Name' --output text 2>/dev/null \
+            && info "MemoryDB snapshot initiated: $snap" \
+            || warn "Failed to snapshot MemoryDB cluster: $name"
+    done
+}
+
+snapshot_dynamodb() {
+    info "--- DynamoDB tables ---"
+    local tables
+    tables=$(aws dynamodb list-tables --region "$REGION" \
+        --query 'TableNames' --output text 2>/dev/null) \
+        || { warn "Could not list DynamoDB tables"; return; }
+    [ -z "$tables" ] || [ "$tables" = "None" ] && { info "No DynamoDB tables found"; return; }
+    for name in $tables; do
+        local backup; backup=$(snap_id "$name")
+        aws dynamodb create-backup \
+            --table-name "$name" \
+            --backup-name "$backup" \
+            --region "$REGION" \
+            --query 'BackupDetails.BackupName' --output text 2>/dev/null \
+            && info "DynamoDB backup initiated: $backup" \
+            || warn "Failed to backup DynamoDB table: $name"
+    done
+}
+
+snapshot_redshift() {
+    info "--- Redshift clusters ---"
+    local ids
+    ids=$(aws redshift describe-clusters --region "$REGION" \
+        --query 'Clusters[?ClusterStatus==`available`].ClusterIdentifier' --output text 2>/dev/null) \
+        || { warn "Could not list Redshift clusters"; return; }
+    [ -z "$ids" ] || [ "$ids" = "None" ] && { info "No available Redshift clusters found"; return; }
+    for id in $ids; do
+        local snap; snap=$(snap_id "$id")
+        aws redshift create-cluster-snapshot \
+            --cluster-identifier "$id" \
+            --snapshot-identifier "$snap" \
+            --region "$REGION" \
+            --query 'Snapshot.SnapshotIdentifier' --output text 2>/dev/null \
+            && info "Redshift snapshot initiated: $snap" \
+            || warn "Failed to snapshot Redshift cluster: $id"
+    done
+}
+
+SERVICES=("$@")
+[ ${#SERVICES[@]} -eq 0 ] && SERVICES=(rds aurora docdb elasticache memorydb dynamodb redshift)
+
+info "takeshot started at $(date) | region: $REGION"
+
+for svc in "${SERVICES[@]}"; do
+    case "$svc" in
+        rds)         snapshot_rds ;;
+        aurora)      snapshot_aurora ;;
+        docdb)       snapshot_docdb ;;
+        elasticache) snapshot_elasticache ;;
+        memorydb)    snapshot_memorydb ;;
+        dynamodb)    snapshot_dynamodb ;;
+        redshift)    snapshot_redshift ;;
+        *) warn "Unknown service '$svc'. Valid: rds aurora docdb elasticache memorydb dynamodb redshift" ;;
+    esac
+done
+
+info "takeshot complete at $(date)"
+EOF
+    chmod +x /usr/local/bin/takeshot
+    info "Installed: takeshot"
+}
+
 # ── Main ───────────────────────────────────────────────────────────────────
 
 if ! is_cloudshell; then
@@ -677,5 +855,6 @@ install_ecr_command
 install_accbp_command
 install_vpc_command
 install_dash_command
+install_takeshot_command
 
 info "=== init.sh complete at $(date) ==="
